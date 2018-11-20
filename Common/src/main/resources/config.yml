@@ -1,0 +1,159 @@
+# How the plugin stores long-term data
+storage:
+  # The storage method
+  #
+  # Options:
+  # - MySQL (remote)
+  # - SQLite (local)
+  method: 'sqlite'
+
+  data:
+    # Address and port of the remote database (if applicable)
+    address: '127.0.0.1:3306'
+    # The name of the database AltFinder will store data in
+    # If you're using remote options, this must be created beforehand
+    database: '2faplus'
+    # Table prefix for all AltFinder tables
+    prefix: '2faplus_'
+    # Database credentials (if applicable)
+    username: ''
+    password: ''
+
+    # MongoDB options- obviously don't need to worry about these if not using MongoDB ;)
+    mongodb:
+      # Connection prefix for all AltFinder connections
+      collection-prefix: ''
+      # MongoDB ClientConnectionURI
+      connection-uri: ''
+
+  settings:
+    # The maximum size of the database connection pool
+    # Determines the max number of connections to the database
+    max-pool-size: 2
+    # The minimum size of the satabase connection pool
+    # Determines the min number of connections kept alive to the database
+    min-idle: 2
+    # The maximum lifetime of a connection in the pool
+    # Should be at least 30 seconds less than any database or infrastructure-imposed connection time limit
+    max-lifetime: 1800000 # 30 minutes
+    # The maximum number of milliseconds that the plugin will wait for a new connection from the pool before timing out
+    timeout: 5000 # 5 seconds
+
+    # Extra connection properties
+    properties:
+      unicode: true
+      encoding: 'utf8'
+
+# Redis is a very fast cache accessible by multiple servers
+# If you don't want to constantly hit your database for queries, try enabling and configuring this
+# You will need to install the (external) Redis server software if you haven't already
+# https://redis.io/
+redis:
+  enabled: false
+  # Address and port of the remote Redis server
+  address: '127.0.0.1:6379'
+  # Redis credentials
+  password: ''
+
+# RabbitMQ is a messaging queue that will allow the plugin to push instant updates across multiple servers
+# You will need to install the (external) RabbitMQ server software if you haven't already
+# https://www.rabbitmq.com/
+rabbitmq:
+  enabled: false
+  # Address and port of the remote RabbitMQ server
+  address: '127.0.0.1:5672'
+  # RabbitMQ credentials
+  username: 'guest'
+  password: 'guest'
+
+# When true, logs some extra output to the console so you can see if/why things might be failing
+debug: false
+
+# Authy is used as the 2FA service.
+# You may get an API key at the link below.
+# https://www.twilio.com/docs/authy/twilioauth-sdk/quickstart/obtain-authy-api-key
+authy:
+  # Authy API key. Required.
+  key: ''
+
+2fa:
+  # When a player successfully authenticates, their UUID and IP is stored in a database
+  # This IP is kept in the database for the below amount of time before being removed
+  # While this IP is in the database, any time they log in from the IP they will not need to re-authenticate
+  ip-lifetime: '30days'
+  # 2FAPlus can protect specific commands from being run without first authenticating
+  # Since this can get pretty annoying pretty quickly, the plugin sets a timer on the first successful 2FA attempt
+  # While this timer is active, 2FA is not required for future verification attempts unless otherwise stated and/or explicitly called via the API
+  # The timer resets every time a 2FA verification is required
+  # 2FA verification is most commonly triggered by the commands below, but can also be triggered via the API
+  verification-lifetime: '3minutes'
+  # Commands to protect with 2FA
+  command-list:
+  - 'op'
+  - 'deop'
+  - 'lp'
+  - 'luckperms'
+  - 'perms'
+  - 'permissions'
+  - 'perm'
+  - 'pex'
+  - 'gm'
+  - 'groupmanager'
+  # Whether or not to completely deny players who don't have 2FA set up
+  # True: Players without a 2FA account registered will be kicked with a message
+  # False: Players without a 2FA account registered will be allowed in by default
+  force-auth: true
+  # The kick message to display to players who don't have 2FA set up
+  no-auth-kick-message: '&cPlease set up 2FA with your admin team before logging in!'
+  # The maximum number of attempts that can be made before kicking the player with a message
+  # 0 or less to disable
+  max-attempts: 3
+  # The kick message to display to players who have tried (and failed) to authenticate too many times
+  too-many-attempts-kick-message: '&cYou have attempted 2FA too many times!'
+  # How players are frozen while they are waiting for authentication
+  freeze:
+    # Stop non-authenticated players from running commands
+    command: true
+    # Stop non-authenticated players from talking in chat
+    chat: true
+    # Stop non-authenticated players from interacting with other players/entities/blocks
+    interact: true
+    # Stop non-authenticated players from hitting other players/entities
+    attack: true
+    # Stop non-authenticated players from moving stuff around in inventories
+    inventory: true
+    # Stop non-authenticated players from dropping/picking up items
+    drops: true
+    # Stop non-authenticated players from breaking/placing blocks
+    block: true
+    # Stop non-authenticated players from moving/teleporting (falling is allowed)
+    move: true
+
+# A list of player UUIDs and/or IPs that bypass 2FA
+# WARNING: Adding to this list will SIGNIFICANTLY decrease security, since anyone connecting from these IPs (or with these UUIDs) will completely bypass the system
+# Seriously, think long and hard before using this list
+# By using this plugin, you are trading some convenience for security. By trading some of that back all you've done is gained the worst of both worlds
+ignore:
+- '127.0.0.1'
+- 'localhost'
+- '::1'
+#- '069a79f4-44e9-4726-a5be-fca90e38aaf5' #Notch
+
+stats:
+  # Whether or not to send anonymous usage statistics to bStats
+  # True: Send anonymous stats; let the author know how well the plugin is doing and how it's used!
+  # False: Do not send stats and make the author sad :(
+  usage: true
+  # Whether or not to send anonymous errors to the author
+  # True: Send errors anonymously to Rollbar and/or GameAnalytics so the author can fix them!
+  # False: Do not send errors and wonder why any bugs you encounter haven't been fixed
+  errors: true
+
+update:
+  # Whether or not to automatically check for updates and notify the console if found
+  check: true
+  # Whether or not to notify players with the 2faplus.admin permission node
+  notify: true
+
+# Config version, no touchy plz
+version: 1.0
