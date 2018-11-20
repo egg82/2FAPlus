@@ -34,80 +34,80 @@
                         <!-- dep-injected -->
                         <relocation>
                             <pattern>com.github.benmanes.caffeine</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.com.github.benmanes.caffeine</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.com.github.benmanes.caffeine</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.zaxxer.hikari</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.com.zaxxer.hikari</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.com.zaxxer.hikari</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>javassist</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.javassist</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.javassist</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.apache.commons.collections</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.apache.commons.collections</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.apache.commons.collections</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.apache.commons.net</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.apache.commons.net</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.apache.commons.net</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.bstats</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.bstats</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.bstats</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>redis.clients</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.redis.clients</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.redis.clients</shadedPattern>
                         </relocation>
 
                         <!-- regular relocations -->
                         <relocation>
                             <pattern>co.aikar.commands</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.co.aikar.commands</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.co.aikar.commands</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>co.aikar.taskchain</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.co.aikar.taskchain</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.co.aikar.taskchain</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.google</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.com.google</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.com.google</shadedPattern>
                             <excludes>
                                 <exclude>com.google.common.*</exclude>
                             </excludes>
                         </relocation>
                         <relocation>
                             <pattern>com.googlecode</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.com.googlecode</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.com.googlecode</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>info.ronjenkins</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.info.ronjenkins</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.info.ronjenkins</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>it.unimi</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.it.unimi</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.it.unimi</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>me.lucko</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.me.lucko</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.me.lucko</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>net.jodah</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.net.jodah</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.net.jodah</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>ninja.egg82</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.ninja.egg82</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.ninja.egg82</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>ninja.leaping</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.ninja.leaping</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.ninja.leaping</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.apache.commons</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.apache.commons</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.apache.commons</shadedPattern>
                             <excludes>
                                 <exclude>org.apache.commons.codec.*</exclude>
                                 <exclude>org.apache.commons.io.*</exclude>
@@ -118,19 +118,19 @@
                         </relocation>
                         <relocation>
                             <pattern>org.checkerframework</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.checkerframework</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.checkerframework</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.codehaus</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.codehaus</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.codehaus</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.hamcrest</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.hamcrest</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.hamcrest</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.jetbrains</pattern>
-                            <shadedPattern>me.egg82.altfinder.external.org.jetbrains</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.jetbrains</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>
@@ -173,7 +173,7 @@
                                 </filter>
                                 <filter>
                                     <!-- prevent removal of things from common -->
-                                    <artifact>me.egg82:altfinder-common</artifact>
+                                    <artifact>me.egg82:2faplus-common</artifact>
                                     <includes>
                                         <include>**</include>
                                     </includes>
