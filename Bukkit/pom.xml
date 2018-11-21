@@ -71,6 +71,10 @@
                             <shadedPattern>me.egg82.tfaplus.external.co.aikar.taskchain</shadedPattern>
                         </relocation>
                         <relocation>
+                            <pattern>com.authy</pattern>
+                            <shadedPattern>me.egg82.tfaplus.external.com.authy</shadedPattern>
+                        </relocation>
+                        <relocation>
                             <pattern>com.google</pattern>
                             <shadedPattern>me.egg82.tfaplus.external.com.google</shadedPattern>
                             <excludes>
