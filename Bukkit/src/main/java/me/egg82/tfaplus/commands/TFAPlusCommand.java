@@ -12,7 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
 
-@CommandAlias("2faplus|tfaplus")
+@CommandAlias("2faplus|tfaplus|2fa|tfa")
 public class TFAPlusCommand extends BaseCommand {
     private final Plugin plugin;
     private final TaskChainFactory taskFactory;
@@ -33,6 +33,7 @@ public class TFAPlusCommand extends BaseCommand {
     @CommandPermission("2faplus.admin")
     @Description("Registers a player in the 2FA system. Valid country codes can be found at https://countrycode.org/")
     @Syntax("<player> <email> [phone-country-code] <phone-number>")
+    @CommandCompletion("@player")
     public void onRegister(CommandSender sender, String playerName, String email, String countryCode, String phone) {
         new RegisterCommand(taskFactory.newChain(), sender, playerName, email, countryCode, phone).run();
     }
@@ -41,6 +42,7 @@ public class TFAPlusCommand extends BaseCommand {
     @CommandPermission("2faplus.admin")
     @Description("Removes a player in the 2FA system.")
     @Syntax("<player>")
+    @CommandCompletion("@player")
     public void onDelete(CommandSender sender, String playerName) {
         new DeleteCommand(taskFactory.newChain(), sender, playerName).run();
     }
@@ -49,6 +51,7 @@ public class TFAPlusCommand extends BaseCommand {
     @CommandPermission("2faplus.admin")
     @Description("Checks the player's registration status in the 2FA system.")
     @Syntax("<player>")
+    @CommandCompletion("@player")
     public void onCheck(CommandSender sender, String playerName) {
         new CheckCommand(taskFactory.newChain(), sender, playerName).run();
     }

@@ -13,6 +13,7 @@ import me.egg82.tfaplus.services.InternalAPI;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.RabbitMQUtil;
+import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import org.slf4j.Logger;
@@ -67,9 +68,7 @@ public class TFAAPI {
      * @param phone The user's phone number
      * @return Whether or not the registration was successful
      */
-    public boolean register(UUID uuid, String email, String phone) {
-        return register(uuid, email, phone, "1");
-    }
+    public boolean register(UUID uuid, String email, String phone) { return register(uuid, email, phone, "1"); }
 
     /**
      * Register a new user from an existing player
@@ -187,17 +186,17 @@ public class TFAAPI {
 
     /**
      * Returns the current verification status of a player
-     * Using this method will reset the verification timer on the player
      *
      * @param uuid The player UUID
+     * @param refresh Whether or not to reset the verification timer
      * @return Whether or not the player is currently verified through the verification timeout
      */
-    public boolean isVerified(UUID uuid) {
+    public boolean isVerified(UUID uuid, boolean refresh) {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
 
-        return internalApi.isVerified(uuid);
+        return internalApi.isVerified(uuid, refresh);
     }
 
     /**

@@ -26,10 +26,10 @@ public class InternalAPI {
 
     private static Cache<ObjectObjectPair<UUID, String>, Boolean> loginCache = Caffeine.newBuilder().expireAfterAccess(1L,TimeUnit.MINUTES).expireAfterWrite(1L,TimeUnit.HOURS).build();
     private static Cache<UUID, Long> authyCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.MINUTES).build();
-    private static LoadingCache<UUID, Boolean> verificationCache = Caffeine.newBuilder().expireAfterAccess(3L, TimeUnit.MINUTES).build(k -> Boolean.FALSE);
+    private static LoadingCache<UUID, Boolean> verificationCache = Caffeine.newBuilder().expireAfterWrite(3L, TimeUnit.MINUTES).build(k -> Boolean.FALSE);
 
     public static void changeVerificationTime(long duration, TimeUnit unit) {
-        verificationCache = Caffeine.newBuilder().expireAfterAccess(duration, unit).build(k -> Boolean.FALSE);
+        verificationCache = Caffeine.newBuilder().expireAfterWrite(duration, unit).build(k -> Boolean.FALSE);
     }
 
     public static void add(LoginData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
@@ -174,8 +174,12 @@ public class InternalAPI {
         }
     }
 
-    public boolean isVerified(UUID uuid) {
-        return verificationCache.get(uuid);
+    public boolean isVerified(UUID uuid, boolean refresh) {
+        boolean retVal = verificationCache.get(uuid);
+        if (refresh) {
+            verificationCache.put(uuid, retVal);
+        }
+        return retVal;
     }
 
     public Optional<Boolean> verify(UUID uuid, String token, Tokens tokens, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
@@ -265,6 +269,39 @@ public class InternalAPI {
         }
 
         return -1L;
+    }
+
+    public static void setLogin(UUID uuid, String ip, long ipTime, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
+        if (debug) {
+            logger.info("Setting login for " + uuid + " (" + ip + ")");
+        }
+
+        // SQL
+        LoginData result = null;
+        try {
+            if (sqlType == SQLType.MySQL) {
+                result = MySQL.updateLogin(sql, storageConfigNode, uuid, ip).get();
+            } else if (sqlType == SQLType.SQLite) {
+                result = SQLite.updateLogin(sql, storageConfigNode, uuid, ip).get();
+            }
+        } catch (ExecutionException ex) {
+            logger.error(ex.getMessage(), ex);
+        } catch (InterruptedException ex) {
+            logger.error(ex.getMessage(), ex);
+            Thread.currentThread().interrupt();
+        }
+
+        if (result == null) {
+            return;
+        }
+
+        // Redis
+        Redis.update(result, ipTime, redisPool, redisConfigNode);
+
+        // RabbitMQ
+        RabbitMQ.broadcast(result, ipTime, rabbitConnection);
+
+        loginCache.put(new ObjectObjectPair<>(uuid, ip), Boolean.TRUE);
     }
 
     public static boolean getLogin(UUID uuid, String ip, long ipTime, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {

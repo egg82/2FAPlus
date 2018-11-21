@@ -1,6 +1,5 @@
 package me.egg82.tfaplus;
 
-import co.aikar.commands.ConditionFailedException;
 import co.aikar.commands.PaperCommandManager;
 import co.aikar.commands.RegisteredCommand;
 import co.aikar.taskchain.BukkitTaskChainFactory;
@@ -15,6 +14,9 @@ import java.util.logging.Level;
 import me.egg82.tfaplus.commands.TFAPlusCommand;
 import me.egg82.tfaplus.core.SQLFetchResult;
 import me.egg82.tfaplus.enums.SQLType;
+import me.egg82.tfaplus.events.AsyncPlayerChatFrozenHandler;
+import me.egg82.tfaplus.events.PlayerLoginCheckHandler;
+import me.egg82.tfaplus.events.PlayerLoginUpdateNotifyHandler;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.extended.RabbitMQReceiver;
@@ -27,7 +29,6 @@ import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.ConfigurationFileUtil;
 import me.egg82.tfaplus.utils.LogUtil;
-import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.events.BukkitEventSubscriber;
 import ninja.egg82.events.BukkitEvents;
 import ninja.egg82.service.ServiceLocator;
@@ -36,9 +37,11 @@ import ninja.egg82.updater.SpigotUpdater;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
-import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.slf4j.Logger;
@@ -207,6 +210,20 @@ public class TFAPlus {
     }
 
     private void loadCommands() {
+        commandManager.getCommandCompletions().registerCompletion("player", c -> {
+            String lower = c.getInput().toLowerCase();
+            Set<String> players = new LinkedHashSet<>();
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (lower.isEmpty() || p.getName().toLowerCase().startsWith(lower)) {
+                    Player player = c.getPlayer();
+                    if (c.getSender().isOp() || (player != null && player.canSee(p) && !isVanished(p))) {
+                        players.add(p.getName());
+                    }
+                }
+            }
+            return ImmutableList.copyOf(players);
+        });
+
         commandManager.getCommandCompletions().registerCompletion("subcommand", c -> {
             String lower = c.getInput().toLowerCase();
             Set<String> commands = new LinkedHashSet<>();
@@ -223,8 +240,9 @@ public class TFAPlus {
     }
 
     private void loadEvents() {
-        //events.add(BukkitEvents.subscribe(AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
-        //events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(AsyncPlayerChatEvent.class, EventPriority.HIGHEST).handler(e -> new AsyncPlayerChatFrozenHandler(plugin).accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler().accept(e)));
     }
 
     private void loadHooks() {
@@ -380,6 +398,13 @@ public class TFAPlus {
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    private boolean isVanished(Player player) {
+        for (MetadataValue meta : player.getMetadata("vanished")) {
+            if (meta.asBoolean()) return true;
+        }
+        return false;
     }
 
     private void log(Level level, String message) {
