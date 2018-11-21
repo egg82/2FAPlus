@@ -94,6 +94,13 @@ public class ConfigurationFileUtil {
             commands = new HashSet<>();
         }
 
+        for (String command : commands) {
+            if (command.charAt(0) == '/') {
+                commands.remove(command);
+                commands.add(command.substring(1));
+            }
+        }
+
         if (debug) {
             for (String command : commands) {
                 logger.info(LogUtil.getHeading() + ChatColor.YELLOW + "Protecting command: " + ChatColor.WHITE + "/" + command);

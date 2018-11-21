@@ -9,4 +9,7 @@ public class CollectionProvider {
 
     private static ConcurrentMap<UUID, Long> frozen = new ConcurrentHashMap<>();
     public static ConcurrentMap<UUID, Long> getFrozen() { return frozen; }
+
+    private static ConcurrentMap<UUID, String> commandFrozen = new ConcurrentHashMap<>();
+    public static ConcurrentMap<UUID, String> getCommandFrozen() { return commandFrozen; }
 }

@@ -79,7 +79,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
 
         if (canLogin(config, cachedConfig, event.getPlayer().getUniqueId(), ip)) {
             if (cachedConfig.getDebug()) {
-                logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has verified from this IP before. Ignoring.");
+                logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has verified from this IP recently. Ignoring.");
             }
             return;
         }

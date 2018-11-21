@@ -36,6 +36,34 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
     public AsyncPlayerChatFrozenHandler(Plugin plugin) { this.plugin = plugin; }
 
     public void accept(AsyncPlayerChatEvent event) {
+        if (CollectionProvider.getCommandFrozen().containsKey(event.getPlayer().getUniqueId())) {
+            String message = event.getMessage().replaceAll("\\s+", "").trim();
+            if (message.matches("\\d+")) {
+                event.setCancelled(true);
+
+                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
+                Optional<Boolean> result = api.verify(event.getPlayer().getUniqueId(), message);
+                if (!result.isPresent()) {
+                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code.");
+                    return;
+                }
+                if (!result.get()) {
+                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
+                    return;
+                }
+
+                String command = CollectionProvider.getCommandFrozen().remove(event.getPlayer().getUniqueId());
+                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your 2FA code was successfully verified! Running the command..");
+                if (event.isAsynchronous()) {
+                    Bukkit.getScheduler().runTask(plugin, () -> Bukkit.getServer().dispatchCommand(event.getPlayer(), command));
+                } else {
+                    Bukkit.getServer().dispatchCommand(event.getPlayer(), command);
+                }
+            }
+
+            return;
+        }
+
         if (!CollectionProvider.getFrozen().containsKey(event.getPlayer().getUniqueId())) {
             return;
         }
@@ -61,10 +89,9 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             return;
         }
 
-        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
-
         event.setCancelled(true);
 
+        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
         Optional<Boolean> result = api.verify(event.getPlayer().getUniqueId(), message);
 
         if (!result.isPresent()) {
