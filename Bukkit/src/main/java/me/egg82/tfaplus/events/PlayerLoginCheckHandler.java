@@ -53,17 +53,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is set to be checked on login.");
         }
 
-        if (cachedConfig.getIgnored().contains(ip)) {
-            if (cachedConfig.getDebug()) {
-                logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is using an ignored IP " + ChatColor.WHITE + ip +  ChatColor.YELLOW + ". Ignoring.");
-            }
-            return;
-        }
-
-        if (cachedConfig.getIgnored().contains(event.getPlayer().getUniqueId().toString())) {
-            if (cachedConfig.getDebug()) {
-                logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is using an ignored UUID " + ChatColor.WHITE + event.getPlayer().getUniqueId() +  ChatColor.YELLOW + ". Ignoring.");
-            }
+        if (cachedConfig.getIgnored().contains(ip) || cachedConfig.getIgnored().contains(event.getPlayer().getUniqueId().toString())) {
             return;
         }
 

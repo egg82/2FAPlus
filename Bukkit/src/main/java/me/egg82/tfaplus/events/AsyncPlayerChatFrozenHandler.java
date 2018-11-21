@@ -32,9 +32,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
     private final Plugin plugin;
 
-    public AsyncPlayerChatFrozenHandler(Plugin plugin) {
-        this.plugin = plugin;
-    }
+    public AsyncPlayerChatFrozenHandler(Plugin plugin) { this.plugin = plugin; }
 
     public void accept(AsyncPlayerChatEvent event) {
         if (!CollectionProvider.getFrozen().containsKey(event.getPlayer().getUniqueId())) {

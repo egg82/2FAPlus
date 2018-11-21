@@ -14,9 +14,7 @@ import java.util.logging.Level;
 import me.egg82.tfaplus.commands.TFAPlusCommand;
 import me.egg82.tfaplus.core.SQLFetchResult;
 import me.egg82.tfaplus.enums.SQLType;
-import me.egg82.tfaplus.events.AsyncPlayerChatFrozenHandler;
-import me.egg82.tfaplus.events.PlayerLoginCheckHandler;
-import me.egg82.tfaplus.events.PlayerLoginUpdateNotifyHandler;
+import me.egg82.tfaplus.events.*;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.extended.RabbitMQReceiver;
@@ -40,7 +38,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
@@ -241,8 +241,10 @@ public class TFAPlus {
 
     private void loadEvents() {
         events.add(BukkitEvents.subscribe(AsyncPlayerChatEvent.class, EventPriority.HIGHEST).handler(e -> new AsyncPlayerChatFrozenHandler(plugin).accept(e)));
+        events.add(BukkitEvents.subscribe(AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
         events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler().accept(e)));
         events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerQuitEvent.class, EventPriority.LOW).handler(e -> new PlayerQuitFrozenHandler().accept(e)));
     }
 
     private void loadHooks() {
