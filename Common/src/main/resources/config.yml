@@ -125,7 +125,7 @@ authy:
     # Stop non-authenticated players from dropping/picking up items
     drops: true
     # Stop non-authenticated players from breaking/placing blocks
-    block: true
+    blocks: true
     # Stop non-authenticated players from moving/teleporting (falling is allowed)
     move: true
 

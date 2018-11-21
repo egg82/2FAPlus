@@ -124,6 +124,37 @@ public class TFAAPI {
     }
 
     /**
+     * Returns the current registration status of a player
+     *
+     * @param uuid The player UUID
+     * @return Whether or not the player is currently registered
+     */
+    public boolean isRegistered(UUID uuid) {
+        if (uuid == null) {
+            throw new IllegalArgumentException("uuid cannot be null.");
+        }
+
+        CachedConfigValues cachedConfig;
+        Configuration config;
+
+        try {
+            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+            config = ServiceLocator.get(Configuration.class);
+        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+            logger.error(ex.getMessage(), ex);
+            return false;
+        }
+
+        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
+            return internalApi.isRegistered(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } catch (IOException | TimeoutException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+
+        return internalApi.isRegistered(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+    }
+
+    /**
      * Deletes an existing user from a player
      *
      * @param uuid The player UUID

@@ -7,17 +7,17 @@ public class FreezeConfigContainer {
     private final boolean attack;
     private final boolean inventory;
     private final boolean drops;
-    private final boolean block;
+    private final boolean blocks;
     private final boolean move;
 
-    public FreezeConfigContainer(boolean command, boolean chat, boolean interact, boolean attack, boolean inventory, boolean drops, boolean block, boolean move) {
+    public FreezeConfigContainer(boolean command, boolean chat, boolean interact, boolean attack, boolean inventory, boolean drops, boolean blocks, boolean move) {
         this.command = command;
         this.chat = chat;
         this.interact = interact;
         this.attack = attack;
         this.inventory = inventory;
         this.drops = drops;
-        this.block = block;
+        this.blocks = blocks;
         this.move = move;
     }
 
@@ -33,7 +33,7 @@ public class FreezeConfigContainer {
 
     public boolean getDrops() { return drops; }
 
-    public boolean getBlock() { return block; }
+    public boolean getBlocks() { return blocks; }
 
     public boolean getMove() { return move; }
 }
