@@ -140,7 +140,7 @@ public class TFAPlus {
 
         workPool.submit(() -> new RedisSubscriber(cachedConfig.getRedisPool(), config.getNode("redis")));
         ServiceLocator.register(new RabbitMQReceiver(cachedConfig.getRabbitConnectionFactory()));
-        ServiceLocator.register(new SpigotUpdater(plugin, 57678));
+        ServiceLocator.register(new SpigotUpdater(plugin, 62600));
     }
 
     private void loadSQL() {
