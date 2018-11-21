@@ -46,7 +46,10 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
             if (colon > -1) {
                 for (String command : cachedConfig.getCommands()) {
                     if (split.startsWith(command)) {
-                        if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
+                        if (!api.isRegistered(event.getPlayer().getUniqueId())) {
+                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
+                            event.setCancelled(true);
+                        } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                             CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
                             event.setCancelled(true);
@@ -57,7 +60,10 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
             } else {
                 for (String command : cachedConfig.getCommands()) {
                     if (message.startsWith(command)) {
-                        if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
+                        if (!api.isRegistered(event.getPlayer().getUniqueId())) {
+                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
+                            event.setCancelled(true);
+                        } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                             CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
                             event.setCancelled(true);
