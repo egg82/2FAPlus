@@ -37,6 +37,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
@@ -239,6 +245,18 @@ public class TFAPlus {
     private void loadEvents() {
         events.add(BukkitEvents.subscribe(AsyncPlayerChatEvent.class, EventPriority.HIGHEST).handler(e -> new AsyncPlayerChatFrozenHandler(plugin).accept(e)));
         events.add(BukkitEvents.subscribe(PlayerCommandPreprocessEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerCommandPreprocessFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerInteractEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerInteractFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(EntityDamageByEntityEvent.class, EventPriority.HIGHEST).handler(e -> new EntityDamageByEntityFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(InventoryClickEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryClickFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(InventoryDragEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryDragFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(InventoryMoveItemEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryMoveItemFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerPickupItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupItemFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerPickupArrowEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupArrowFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerDropItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerDropItemFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(BlockPlaceEvent.class, EventPriority.HIGHEST).handler(e -> new BlockPlaceFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(BlockBreakEvent.class, EventPriority.HIGHEST).handler(e -> new BlockBreakFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerMoveEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerMoveFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerTeleportEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerTeleportFrozenHandler().accept(e)));
 
         events.add(BukkitEvents.subscribe(AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
         events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler(plugin).accept(e)));
