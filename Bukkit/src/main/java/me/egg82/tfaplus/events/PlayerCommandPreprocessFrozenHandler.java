@@ -51,6 +51,7 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                             event.setCancelled(true);
                         } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                             CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
+                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
                             event.setCancelled(true);
                         }
@@ -65,6 +66,7 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                             event.setCancelled(true);
                         } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                             CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
+                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
                             event.setCancelled(true);
                         }
