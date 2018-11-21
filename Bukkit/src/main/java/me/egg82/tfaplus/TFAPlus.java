@@ -207,12 +207,6 @@ public class TFAPlus {
     }
 
     private void loadCommands() {
-        commandManager.getCommandConditions().addCondition(String.class, "ip", (c, exec, value) -> {
-            if (!ValidationUtil.isValidIp(value)) {
-                throw new ConditionFailedException("Value must be a valid IP address.");
-            }
-        });
-
         commandManager.getCommandCompletions().registerCompletion("subcommand", c -> {
             String lower = c.getInput().toLowerCase();
             Set<String> commands = new LinkedHashSet<>();

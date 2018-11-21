@@ -189,9 +189,12 @@ public class InternalAPI {
             return Optional.empty();
         }
 
+        Map<String, String> options = new HashMap<>();
+        options.put("force", "true");
+
         Token verification;
         try {
-            verification = tokens.verify((int) id, token);
+            verification = tokens.verify((int) id, token, options);
         } catch (AuthyException ex) {
             logger.error(ex.getMessage(), ex);
             return Optional.empty();
