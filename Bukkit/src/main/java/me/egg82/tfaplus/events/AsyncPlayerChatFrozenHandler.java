@@ -81,12 +81,10 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             });
 
             if (cachedConfig.getMaxAttempts() <= 0L || attempts < cachedConfig.getMaxAttempts()) {
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid!");
+                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
             } else {
                 if (event.isAsynchronous()) {
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        kickPlayer(config, event.getPlayer());
-                    });
+                    Bukkit.getScheduler().runTask(plugin, () -> kickPlayer(config, event.getPlayer()));
                 } else {
                     kickPlayer(config, event.getPlayer());
                 }
