@@ -38,14 +38,16 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                 event.setCancelled(true);
             }
         } else {
-            int colon = event.getMessage().indexOf(':');
-            String split = event.getMessage().substring(colon + 1);
+            String message = event.getMessage().substring(1);
+
+            int colon = message.indexOf(':');
+            String split = message.substring(colon + 1);
 
             if (colon > -1) {
                 for (String command : cachedConfig.getCommands()) {
                     if (split.startsWith(command)) {
                         if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
-                            CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), event.getMessage());
+                            CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
                             event.setCancelled(true);
                         }
@@ -54,9 +56,9 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                 }
             } else {
                 for (String command : cachedConfig.getCommands()) {
-                    if (event.getMessage().startsWith(command)) {
+                    if (message.startsWith(command)) {
                         if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
-                            CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), event.getMessage());
+                            CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
                             event.setCancelled(true);
                         }
