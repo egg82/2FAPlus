@@ -66,6 +66,7 @@ public class Redis {
                         obj.put("uuid", result.getUUID().toString());
                         obj.put("ip", result.getIP());
                         obj.put("created", result.getCreated());
+                        obj.put("id", serverId.toString());
                         redis.publish("2faplus-login", obj.toJSONString());
                     } else {
                         redis.publish("2faplus-delete", result.getUUID().toString());
@@ -78,7 +79,8 @@ public class Redis {
 
                     JSONObject obj = new JSONObject();
                     obj.put("uuid", result.getUUID().toString());
-                    obj.put("id", result.getID());
+                    obj.put("i", result.getID());
+                    obj.put("id", serverId.toString());
                     redis.publish("2faplus-authy", obj.toJSONString());
                 }
 
@@ -125,6 +127,7 @@ public class Redis {
                     obj.put("uuid", sqlResult.getUUID().toString());
                     obj.put("ip", sqlResult.getIP());
                     obj.put("created", sqlResult.getCreated());
+                    obj.put("id", serverId.toString());
                     redis.publish("2faplus-login", obj.toJSONString());
                 } else {
                     redis.publish("2faplus-delete", sqlResult.getUUID().toString());
@@ -151,7 +154,8 @@ public class Redis {
 
                 JSONObject obj = new JSONObject();
                 obj.put("uuid", sqlResult.getUUID().toString());
-                obj.put("id", sqlResult.getID());
+                obj.put("i", sqlResult.getID());
+                obj.put("id", serverId.toString());
                 redis.publish("2faplus-authy", obj.toJSONString());
 
                 return Boolean.TRUE;
@@ -203,12 +207,12 @@ public class Redis {
                     return Boolean.FALSE;
                 }
 
-                String uuidKey = "altfndr:uuid:" + uuid;
+                String uuidKey = "2faplus:uuid:" + uuid;
 
                 Set<String> data = redis.smembers(uuidKey);
                 if (data != null) {
                     for (String ip : data) {
-                        String ipKey = "altfndr:ip:" + ip;
+                        String ipKey = "2faplus:ip:" + ip;
                         String loginKey = "2faplus:login:" + uuid + "|" + ip;
                         String authyKey = "2faplus:authy:" + uuid;
                         redis.del(loginKey);
@@ -218,7 +222,7 @@ public class Redis {
                 }
                 redis.del(uuidKey);
 
-                redis.publish("altfndr-delete", uuid.toString());
+                redis.publish("2faplus-delete", uuid.toString());
 
                 return Boolean.TRUE;
             } catch (JedisException ex) {

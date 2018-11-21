@@ -237,6 +237,19 @@ public class SQLite {
         });
     }
 
+    public static CompletableFuture<Void> delete(String uuid, SQL sql, ConfigurationNode storageConfigNode) {
+        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
+
+        return CompletableFuture.runAsync(() -> {
+            try {
+                sql.execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid);
+                sql.execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid);
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+        });
+    }
+
     public static CompletableFuture<Long> getCurrentTime(SQL sql) {
         return CompletableFuture.supplyAsync(() -> {
             try {

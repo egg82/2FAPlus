@@ -1,12 +1,13 @@
 package me.egg82.tfaplus.extended;
 
 import java.util.UUID;
-import me.egg82.altfinder.core.PlayerData;
-import me.egg82.altfinder.services.InternalAPI;
-import me.egg82.altfinder.services.Redis;
-import me.egg82.altfinder.utils.RedisUtil;
-import me.egg82.altfinder.utils.ValidationUtil;
-import ninja.egg82.json.JSONUtil;
+import me.egg82.tfaplus.core.AuthyData;
+import me.egg82.tfaplus.core.LoginData;
+import me.egg82.tfaplus.services.InternalAPI;
+import me.egg82.tfaplus.services.Redis;
+import me.egg82.tfaplus.utils.RedisUtil;
+import me.egg82.tfaplus.utils.ValidationUtil;
+import ninja.egg82.analytics.utils.JSONUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import ninja.leaping.configurate.ConfigurationNode;
@@ -28,7 +29,7 @@ public class RedisSubscriber {
                 return;
             }
 
-            redis.subscribe(new Subscriber(), "altfndr-info", "altfndr-delete");
+            redis.subscribe(new Subscriber(), "2faplus-login", "2faplus-authy", "2faplus-delete");
         } catch (JedisException ex) {
             logger.error(ex.getMessage(), ex);
         }
@@ -38,15 +39,12 @@ public class RedisSubscriber {
         private Subscriber() { super(); }
 
         public void onMessage(String channel, String message) {
-            if (channel.equals("altfndr-info")) {
+            if (channel.equals("2faplus-login")) {
                 try {
                     JSONObject obj = JSONUtil.parseObject(message);
                     UUID uuid = UUID.fromString((String) obj.get("uuid"));
                     String ip = (String) obj.get("ip");
-                    long count = ((Number) obj.get("count")).longValue();
-                    String server = (String) obj.get("server");
                     long created = ((Number) obj.get("created")).longValue();
-                    long updated = ((Number) obj.get("updated")).longValue();
                     UUID id = UUID.fromString((String) obj.get("id"));
 
                     if (!ValidationUtil.isValidIp(ip)) {
@@ -62,11 +60,30 @@ public class RedisSubscriber {
                     CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                     Configuration config = ServiceLocator.get(Configuration.class);
 
-                    InternalAPI.add(new PlayerData(uuid, ip, count, server, created, updated), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    InternalAPI.add(new LoginData(uuid, ip, created), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
                 } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
-            } else if (channel.equals("altfndr-delete")) {
+            } else if (channel.equals("2faplus-authy")) {
+                try {
+                    JSONObject obj = JSONUtil.parseObject(message);
+                    UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                    long i = ((Number) obj.get("i")).longValue();
+                    UUID id = UUID.fromString((String) obj.get("id"));
+
+                    if (id.equals(Redis.getServerID())) {
+                        logger.info("ignoring message sent from this server");
+                        return;
+                    }
+
+                    CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+                    Configuration config = ServiceLocator.get(Configuration.class);
+
+                    InternalAPI.add(new AuthyData(uuid, i), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (channel.equals("2faplus-delete")) {
                 CachedConfigValues cachedConfig;
                 Configuration config;
 
@@ -78,7 +95,7 @@ public class RedisSubscriber {
                     return;
                 }
 
-                // In this case, the message is the "IP"
+                // In this case, the message is the "UUID"
                 InternalAPI.delete(message, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
             }
         }

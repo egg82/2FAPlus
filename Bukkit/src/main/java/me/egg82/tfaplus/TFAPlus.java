@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
+import me.egg82.tfaplus.commands.TFAPlusCommand;
 import me.egg82.tfaplus.core.SQLFetchResult;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
@@ -224,13 +225,12 @@ public class TFAPlus {
             return ImmutableList.copyOf(commands);
         });
 
-        commandManager.registerCommand(new AltFinderCommand(plugin, taskFactory));
-        commandManager.registerCommand(new SeenCommand(commandManager, taskFactory));
+        commandManager.registerCommand(new TFAPlusCommand(plugin, taskFactory));
     }
 
     private void loadEvents() {
-        events.add(BukkitEvents.subscribe(AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler().accept(e)));
+        //events.add(BukkitEvents.subscribe(AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
+        //events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler().accept(e)));
     }
 
     private void loadHooks() {

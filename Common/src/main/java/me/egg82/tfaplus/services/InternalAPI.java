@@ -32,14 +32,14 @@ public class InternalAPI {
         verificationCache = Caffeine.newBuilder().expireAfterAccess(duration, unit).build(k -> Boolean.FALSE);
     }
 
-    public void add(LoginData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+    public static void add(LoginData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
         loginCache.put(new ObjectObjectPair<>(data.getUUID(), data.getIP()), Boolean.TRUE);
         if (sqlType == SQLType.SQLite) {
             SQLite.addLogin(data, sql, storageConfigNode);
         }
     }
 
-    public void add(AuthyData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+    public static void add(AuthyData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
         authyCache.put(data.getUUID(), data.getID());
         if (sqlType == SQLType.SQLite) {
             SQLite.addAuthy(data, sql, storageConfigNode);
@@ -163,6 +163,12 @@ public class InternalAPI {
         authyCache.invalidate(uuid);
         verificationCache.invalidate(uuid);
 
+        if (sqlType == SQLType.SQLite) {
+            SQLite.delete(uuid, sql, storageConfigNode);
+        }
+    }
+
+    public static void delete(String uuid, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
         if (sqlType == SQLType.SQLite) {
             SQLite.delete(uuid, sql, storageConfigNode);
         }
