@@ -14,6 +14,7 @@ import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.services.InternalAPI;
+import me.egg82.tfaplus.utils.LogUtil;
 import me.egg82.tfaplus.utils.RabbitMQUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
@@ -54,18 +55,20 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         String message = event.getMessage().replaceAll("\\s+", "").trim();
         if (!message.matches("\\d+")) {
             if (cachedConfig.getFreeze().getChat()) {
-                event.getPlayer().sendMessage(ChatColor.DARK_RED + "You must first authenticate with your 2FA code before chatting!");
+                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "You must first authenticate with your 2FA code before chatting!");
                 event.setCancelled(true);
             }
             return;
         }
+
+        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
 
         event.setCancelled(true);
 
         Optional<Boolean> result = api.verify(event.getPlayer().getUniqueId(), message);
 
         if (!result.isPresent()) {
-            event.getPlayer().sendMessage(ChatColor.DARK_RED + "Something went wrong while validating your 2FA code.");
+            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code.");
             return;
         }
 
@@ -78,7 +81,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             });
 
             if (cachedConfig.getMaxAttempts() <= 0L || attempts < cachedConfig.getMaxAttempts()) {
-                event.getPlayer().sendMessage(ChatColor.DARK_RED + "Your 2FA code was invalid!");
+                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid!");
             } else {
                 if (event.isAsynchronous()) {
                     Bukkit.getScheduler().runTask(plugin, () -> {
@@ -93,7 +96,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
         setLogin(config, cachedConfig, event.getPlayer().getUniqueId(), getIp(event.getPlayer()));
         CollectionProvider.getFrozen().remove(event.getPlayer().getUniqueId());
-        event.getPlayer().sendMessage(ChatColor.GREEN + "Your 2FA code was successfully verified!");
+        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your 2FA code was successfully verified!");
     }
 
     private void setLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {

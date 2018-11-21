@@ -17,9 +17,11 @@ import me.egg82.tfaplus.utils.LogUtil;
 import me.egg82.tfaplus.utils.RabbitMQUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +29,10 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final TFAAPI api = TFAAPI.getInstance();
+
+    private final Plugin plugin;
+
+    public PlayerLoginCheckHandler(Plugin plugin) { this.plugin = plugin; }
 
     public void accept(PlayerLoginEvent event) {
         String ip = getIp(event.getAddress());
@@ -79,7 +85,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
         }
 
         CollectionProvider.getFrozen().put(event.getPlayer().getUniqueId(), 0L);
-        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
+        Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat."));
         if (cachedConfig.getDebug()) {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has been sent a verification request.");
         }

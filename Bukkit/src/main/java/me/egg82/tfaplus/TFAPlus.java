@@ -242,8 +242,8 @@ public class TFAPlus {
     private void loadEvents() {
         events.add(BukkitEvents.subscribe(AsyncPlayerChatEvent.class, EventPriority.HIGHEST).handler(e -> new AsyncPlayerChatFrozenHandler(plugin).accept(e)));
         events.add(BukkitEvents.subscribe(AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler(plugin).accept(e)));
+        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler(plugin).accept(e)));
         events.add(BukkitEvents.subscribe(PlayerQuitEvent.class, EventPriority.LOW).handler(e -> new PlayerQuitFrozenHandler().accept(e)));
     }
 
