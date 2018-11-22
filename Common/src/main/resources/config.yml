@@ -99,6 +99,10 @@ authy:
   - 'pex'
   - 'gm'
   - 'groupmanager'
+  - '2faplus'
+  - 'tfaplus'
+  - '2fa'
+  - 'tfa'
   # Whether or not to completely deny players who don't have 2FA set up
   # True: Players without a 2FA account registered will be kicked with a message
   # False: Players without a 2FA account registered will be allowed in by default
@@ -156,4 +160,4 @@ update:
   notify: true
 
 # Config version, no touchy plz
-version: 1.0
+version: 1.1
