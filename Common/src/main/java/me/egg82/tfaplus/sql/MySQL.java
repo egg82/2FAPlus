@@ -49,7 +49,7 @@ public class MySQL {
 
                 sql.execute("CREATE TABLE `" + tablePrefix + "authy` ("
                         + "`uuid` VARCHAR(36) NOT NULL,"
-                        + "`id` BIGINT NOT NULL"
+                        + "`id` BIGINT NOT NULL DEFAULT 0"
                         + ");");
                 sql.execute("ALTER TABLE `" + tablePrefix + "authy` ADD UNIQUE (`uuid`);");
             } catch (SQLException ex) {
@@ -65,8 +65,8 @@ public class MySQL {
                 sql.execute("CREATE TABLE `" + tablePrefix + "login_queue` ("
                         + "`ip` VARCHAR(45) NOT NULL,"
                         + "`uuid` VARCHAR(36) NOT NULL,"
-                        + "`created` TIMESTAMP NOT NULL,"
-                        + "`updated` TIMESTAMP NOT NULL"
+                        + "`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                        + "`updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
                         + ");");
                 sql.execute("ALTER TABLE `" + tablePrefix + "login_queue` ADD UNIQUE (`ip`, `uuid`);");
             } catch (SQLException ex) {
@@ -81,8 +81,8 @@ public class MySQL {
 
                 sql.execute("CREATE TABLE `" + tablePrefix + "authy_queue` ("
                         + "`uuid` VARCHAR(36) NOT NULL,"
-                        + "`id` BIGINT NOT NULL,"
-                        + "`updated` TIMESTAMP NOT NULL"
+                        + "`id` BIGINT NOT NULL DEFAULT 0,"
+                        + "`updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
                         + ");");
                 sql.execute("ALTER TABLE `" + tablePrefix + "authy_queue` ADD UNIQUE (`uuid`);");
             } catch (SQLException ex) {

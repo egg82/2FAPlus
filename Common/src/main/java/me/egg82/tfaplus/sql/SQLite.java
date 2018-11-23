@@ -31,7 +31,7 @@ public class SQLite {
 
                 sql.execute("CREATE TABLE `" + tablePrefix + "login` ("
                         + "`ip` TEXT(45) NOT NULL,"
-                        + "`uuid` TEXT(36) NOT NULL,"
+                        + "`uuid` TEXT(36) NOT NULL DEFAULT 0,"
                         + "`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                         + "UNIQUE(`ip`, `uuid`)"
                         + ");");
@@ -47,7 +47,23 @@ public class SQLite {
 
                 sql.execute("CREATE TABLE `" + tablePrefix + "authy` ("
                         + "`uuid` TEXT(36) NOT NULL,"
-                        + "`id` INTEGER NOT NULL,"
+                        + "`id` INTEGER NOT NULL DEFAULT 0,"
+                        + "UNIQUE(`uuid`)"
+                        + ");");
+            } catch (SQLException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            try {
+                SQLQueryResult query = sql.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='" + tablePrefix + "totp';");
+                if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
+                    return;
+                }
+
+                sql.execute("CREATE TABLE `" + tablePrefix + "totp` ("
+                        + "`uuid` TEXT(36) NOT NULL,"
+                        + "`length` INTEGER NOT NULL DEFAULT 0,"
+                        + "`key` BLOB NOT NULL,"
                         + "UNIQUE(`uuid`)"
                         + ");");
             } catch (SQLException ex) {

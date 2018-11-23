@@ -69,12 +69,21 @@ rabbitmq:
 # When true, logs some extra output to the console so you can see if/why things might be failing
 debug: false
 
-# Authy is used as the 2FA service.
+# Authy is used as one of the available 2FA services.
 # You may get an API key at the link below.
 # https://www.twilio.com/docs/authy/twilioauth-sdk/quickstart/obtain-authy-api-key
 authy:
   # Authy API key. Required.
   key: ''
+
+# TOTP is used as one of the available 2FA services.
+# This can be used with any service that takes a QR code
+# eg. Google Authenticator
+totp:
+  # The number of digits to generate
+  digits: 6
+  # The business/organization name that shows up on the 2FA app when scanning the QR code
+  issuer: '2FAPlus'
 
 2fa:
   # When a player successfully authenticates, their UUID and IP is stored in a database
@@ -160,4 +169,4 @@ update:
   notify: true
 
 # Config version, no touchy plz
-version: 1.1
+version: 1.2

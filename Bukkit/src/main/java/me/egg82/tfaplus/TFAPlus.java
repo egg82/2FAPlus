@@ -127,6 +127,11 @@ public class TFAPlus {
     private void loadServices() {
         ConfigurationFileUtil.reloadConfig(plugin);
 
+        loadServicesExternal();
+        ServiceLocator.register(new SpigotUpdater(plugin, 62600));
+    }
+
+    public void loadServicesExternal() {
         Configuration config;
         CachedConfigValues cachedConfig;
 
@@ -140,7 +145,6 @@ public class TFAPlus {
 
         workPool.submit(() -> new RedisSubscriber(cachedConfig.getRedisPool(), config.getNode("redis")));
         ServiceLocator.register(new RabbitMQReceiver(cachedConfig.getRabbitConnectionFactory()));
-        ServiceLocator.register(new SpigotUpdater(plugin, 62600));
     }
 
     private void loadSQL() {
@@ -167,6 +171,33 @@ public class TFAPlus {
                     SQLite.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
                         Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
                         updateSQL();
+                    })
+            );
+        }
+    }
+
+    public void loadSQLExternal() {
+        Configuration config;
+        CachedConfigValues cachedConfig;
+
+        try {
+            config = ServiceLocator.get(Configuration.class);
+            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+        } catch (InstantiationException | IllegalAccessException | ServiceNotFoundException ex) {
+            logger.error(ex.getMessage(), ex);
+            return;
+        }
+
+        if (cachedConfig.getSQLType() == SQLType.MySQL) {
+            MySQL.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
+                    MySQL.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                    })
+            );
+        } else if (cachedConfig.getSQLType() == SQLType.SQLite) {
+            SQLite.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
+                    SQLite.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
                     })
             );
         }
@@ -239,7 +270,7 @@ public class TFAPlus {
             return ImmutableList.copyOf(commands);
         });
 
-        commandManager.registerCommand(new TFAPlusCommand(plugin, taskFactory));
+        commandManager.registerCommand(new TFAPlusCommand(this, plugin, taskFactory));
     }
 
     private void loadEvents() {
@@ -384,7 +415,7 @@ public class TFAPlus {
         placeholderapi.ifPresent(v -> v.cancel());
     }
 
-    private void unloadServices() {
+    public void unloadServices() {
         CachedConfigValues cachedConfig;
         RabbitMQReceiver rabbitReceiver;
 

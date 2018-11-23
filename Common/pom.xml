@@ -5,7 +5,7 @@
     <parent>
         <artifactId>2fa-plus-parent</artifactId>
         <groupId>me.egg82</groupId>
-        <version>1.0.4</version>
+        <version>1.1.5</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -117,10 +117,16 @@
             <artifactId>amqp-client</artifactId>
             <version>5.5.0</version>
         </dependency>
+
         <dependency>
             <groupId>com.authy</groupId>
             <artifactId>authy-java</artifactId>
             <version>1.5.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.warrenstrange</groupId>
+            <artifactId>googleauth</artifactId>
+            <version>1.1.2</version>
         </dependency>
 
         <dependency>
