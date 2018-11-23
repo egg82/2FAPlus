@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
 public class TFAPlus {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final ExecutorService workPool = Executors.newFixedThreadPool(2, new ThreadFactoryBuilder().setNameFormat("2FAPlus-%d").build());
+    private ExecutorService workPool = null;
 
     private TaskChainFactory taskFactory;
     private PaperCommandManager commandManager;
@@ -132,6 +132,8 @@ public class TFAPlus {
     }
 
     public void loadServicesExternal() {
+        workPool = Executors.newFixedThreadPool(2, new ThreadFactoryBuilder().setNameFormat("2FAPlus-%d").build());
+
         Configuration config;
         CachedConfigValues cachedConfig;
 
