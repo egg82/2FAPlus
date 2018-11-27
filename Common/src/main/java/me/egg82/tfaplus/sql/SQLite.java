@@ -4,9 +4,11 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import javax.crypto.SecretKey;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.core.SQLFetchResult;
+import me.egg82.tfaplus.core.TOTPData;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
 import ninja.egg82.sql.SQL;
@@ -78,6 +80,7 @@ public class SQLite {
         return CompletableFuture.supplyAsync(() -> {
             List<LoginData> loginData = new ArrayList<>();
             List<AuthyData> authyData = new ArrayList<>();
+            List<TOTPData> totpData = new ArrayList<>();
             List<String> removedKeys = new ArrayList<>();
 
             try {
@@ -131,7 +134,31 @@ public class SQLite {
                 logger.error(ex.getMessage(), ex);
             }
 
-            return new SQLFetchResult(loginData.toArray(new LoginData[0]), authyData.toArray(new AuthyData[0]), removedKeys.toArray(new String[0]));
+            try {
+                SQLQueryResult query = sql.query("SELECT `uuid`, `length`, `key` FROM `" + tablePrefix + "totp`;");
+
+                // Iterate rows
+                for (Object[] o : query.getData()) {
+                    // Validate UUID/IP and remove bad data
+                    if (!ValidationUtil.isValidUuid((String) o[0])) {
+                        removedKeys.add("2faplus:uuid:" + o[0]);
+                        removedKeys.add("2faplus:totp:" + o[0]);
+                        sql.execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", o[0]);
+                        continue;
+                    }
+
+                    // Grab all data and convert to more useful object types
+                    UUID uuid = UUID.fromString((String) o[0]);
+                    long length = ((Number) o[1]).longValue();
+                    byte[] key = (byte[]) o[2];
+
+                    totpData.add(new TOTPData(uuid, length, key));
+                }
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            return new SQLFetchResult(loginData.toArray(new LoginData[0]), authyData.toArray(new AuthyData[0]), totpData.toArray(new TOTPData[0]), removedKeys.toArray(new String[0]));
         });
     }
 
@@ -180,6 +207,30 @@ public class SQLite {
         });
     }
 
+    public static CompletableFuture<TOTPData> getTOTPData(UUID uuid, SQL sql, ConfigurationNode storageConfigNode) {
+        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
+
+        return CompletableFuture.supplyAsync(() -> {
+            TOTPData data = null;
+
+            try {
+                SQLQueryResult query = sql.query("SELECT `length`, `key` FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid.toString());
+
+                // Iterate rows
+                for (Object[] o : query.getData()) {
+                    // Grab all data and convert to more useful object types
+                    long length = ((Number) o[0]).longValue();
+                    byte[] key = (byte[]) o[1];
+                    data = new TOTPData(uuid, length, key);
+                }
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            return data;
+        });
+    }
+
     public static CompletableFuture<LoginData> updateLogin(SQL sql, ConfigurationNode storageConfigNode, UUID uuid, String ip) {
         String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
 
@@ -216,6 +267,20 @@ public class SQLite {
         });
     }
 
+    public static CompletableFuture<TOTPData> updateTOTP(SQL sql, ConfigurationNode storageConfigNode, UUID uuid, long length, SecretKey key) {
+        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES(?, ?, ?);", uuid.toString(), length, key);
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            return new TOTPData(uuid, length, key);
+        });
+    }
+
     public static CompletableFuture<Void> addLogin(LoginData data, SQL sql, ConfigurationNode storageConfigNode) {
         String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
 
@@ -240,6 +305,18 @@ public class SQLite {
         });
     }
 
+    public static CompletableFuture<Void> addTOTP(TOTPData data, SQL sql, ConfigurationNode storageConfigNode) {
+        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
+
+        return CompletableFuture.runAsync(() -> {
+            try {
+                sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES (?, ?, ?);", data.getUUID().toString(), data.getLength(), data.getKey().getEncoded());
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+        });
+    }
+
     public static CompletableFuture<Void> delete(UUID uuid, SQL sql, ConfigurationNode storageConfigNode) {
         String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
 
@@ -247,6 +324,7 @@ public class SQLite {
             try {
                 sql.execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid.toString());
                 sql.execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid.toString());
+                sql.execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid.toString());
             } catch (SQLException | ClassCastException ex) {
                 logger.error(ex.getMessage(), ex);
             }
@@ -260,6 +338,7 @@ public class SQLite {
             try {
                 sql.execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid);
                 sql.execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid);
+                sql.execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid);
             } catch (SQLException | ClassCastException ex) {
                 logger.error(ex.getMessage(), ex);
             }

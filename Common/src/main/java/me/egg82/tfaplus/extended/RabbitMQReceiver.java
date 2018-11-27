@@ -2,10 +2,12 @@ package me.egg82.tfaplus.extended;
 
 import com.rabbitmq.client.*;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.LoginData;
+import me.egg82.tfaplus.core.TOTPData;
 import me.egg82.tfaplus.services.InternalAPI;
 import me.egg82.tfaplus.services.RabbitMQ;
 import me.egg82.tfaplus.utils.RabbitMQUtil;
@@ -21,6 +23,8 @@ import org.slf4j.LoggerFactory;
 public class RabbitMQReceiver {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    private static Base64.Decoder decoder = Base64.getDecoder();
+
     private Connection connection = null;
     private Channel channel = null;
 
@@ -35,6 +39,7 @@ public class RabbitMQReceiver {
 
             channel.exchangeDeclare("2faplus-login", "fanout");
             channel.exchangeDeclare("2faplus-authy", "fanout");
+            channel.exchangeDeclare("2faplus-totp", "fanout");
             channel.exchangeDeclare("2faplus-delete", "fanout");
 
             String loginQueueName = channel.queueDeclare().getQueue();
@@ -42,6 +47,9 @@ public class RabbitMQReceiver {
 
             String authyQueueName = channel.queueDeclare().getQueue();
             channel.queueBind(authyQueueName, "2faplus-authy", "");
+
+            String totpQueueName = channel.queueDeclare().getQueue();
+            channel.queueBind(totpQueueName, "2faplus-totp", "");
 
             String deleteQueueName = channel.queueDeclare().getQueue();
             channel.queueBind(deleteQueueName, "2faplus-delete", "");
@@ -115,6 +123,39 @@ public class RabbitMQReceiver {
                 }
             };
             channel.basicConsume(authyQueueName, true, authyConsumer);
+
+            Consumer totpConsumer = new DefaultConsumer(channel) {
+                public void handleDelivery(String tag, Envelope envelope, AMQP.BasicProperties properies, byte[] body) throws IOException {
+                    String message = new String(body, "UTF-8");
+
+                    try {
+                        JSONObject obj = JSONUtil.parseObject(message);
+
+                        if (!ValidationUtil.isValidUuid((String) obj.get("uuid"))) {
+                            logger.warn("non-valid UUID sent through RabbitMQ");
+                            return;
+                        }
+
+                        UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                        long length = ((Number) obj.get("length")).longValue();
+                        byte[] key = decoder.decode((String) obj.get("key"));
+                        UUID id = UUID.fromString((String) obj.get("id"));
+
+                        if (id.equals(RabbitMQ.getServerID())) {
+                            logger.info("ignoring message sent from this server");
+                            return;
+                        }
+
+                        CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+                        Configuration config = ServiceLocator.get(Configuration.class);
+
+                        InternalAPI.add(new TOTPData(uuid, length, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                        logger.error(ex.getMessage(), ex);
+                    }
+                }
+            };
+            channel.basicConsume(totpQueueName, true, totpConsumer);
 
             Consumer deleteConsumer = new DefaultConsumer(channel) {
                 public void handleDelivery(String tag, Envelope envelope, AMQP.BasicProperties properies, byte[] body) throws IOException {

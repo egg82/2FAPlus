@@ -2,19 +2,26 @@ package me.egg82.tfaplus.services;
 
 import com.authy.AuthyException;
 import com.authy.api.*;
+import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.rabbitmq.client.Connection;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import javax.crypto.SecretKey;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.LoginData;
+import me.egg82.tfaplus.core.TOTPData;
 import me.egg82.tfaplus.enums.SQLType;
+import me.egg82.tfaplus.extended.ServiceKeys;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
 import ninja.egg82.sql.SQL;
+import ninja.egg82.tuples.longs.LongObjectPair;
 import ninja.egg82.tuples.objects.ObjectObjectPair;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.slf4j.Logger;
@@ -26,6 +33,7 @@ public class InternalAPI {
 
     private static Cache<ObjectObjectPair<UUID, String>, Boolean> loginCache = Caffeine.newBuilder().expireAfterAccess(1L,TimeUnit.MINUTES).expireAfterWrite(1L,TimeUnit.HOURS).build();
     private static Cache<UUID, Long> authyCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
+    private static Cache<UUID, LongObjectPair<SecretKey>> totpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static LoadingCache<UUID, Boolean> verificationCache = Caffeine.newBuilder().expireAfterWrite(3L, TimeUnit.MINUTES).build(k -> Boolean.FALSE);
 
     public static void changeVerificationTime(long duration, TimeUnit unit) {
@@ -46,7 +54,14 @@ public class InternalAPI {
         }
     }
 
-    public boolean register(UUID uuid, String email, String phone, String countryCode, Users users, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
+    public static void add(TOTPData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+        totpCache.put(data.getUUID(), new LongObjectPair<>(data.getLength(), data.getKey()));
+        if (sqlType == SQLType.SQLite) {
+            SQLite.addTOTP(data, sql, storageConfigNode);
+        }
+    }
+
+    public boolean registerAuthy(UUID uuid, String email, String phone, String countryCode, Users users, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
         if (debug) {
             logger.info("Registering " + uuid + " (" + email + ", +" + countryCode + " " + phone + ")");
         }
@@ -104,6 +119,7 @@ public class InternalAPI {
                 loginCache.invalidate(kvp.getKey());
             }
         }
+        totpCache.invalidate(uuid);
         authyCache.invalidate(uuid);
         verificationCache.invalidate(uuid);
 
@@ -121,21 +137,19 @@ public class InternalAPI {
             Thread.currentThread().interrupt();
         }
 
-        if (result == null) {
-            return false;
-        }
+        if (result != null) {
+            Hash response;
+            try {
+                response = users.deleteUser((int) result.getID());
+            } catch (AuthyException ex) {
+                logger.error(ex.getMessage(), ex);
+                return false;
+            }
 
-        Hash response;
-        try {
-            response = users.deleteUser((int) result.getID());
-        } catch (AuthyException ex) {
-            logger.error(ex.getMessage(), ex);
-            return false;
-        }
-
-        if (!response.isOk()) {
-            logger.error(response.getError().getMessage());
-            return false;
+            if (!response.isOk()) {
+                logger.error(response.getError().getMessage());
+                return false;
+            }
         }
 
         // SQL
@@ -160,6 +174,7 @@ public class InternalAPI {
                 loginCache.invalidate(kvp.getKey());
             }
         }
+        totpCache.invalidate(uuid);
         authyCache.invalidate(uuid);
         verificationCache.invalidate(uuid);
 
@@ -182,7 +197,7 @@ public class InternalAPI {
         return retVal;
     }
 
-    public Optional<Boolean> verify(UUID uuid, String token, Tokens tokens, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
+    public Optional<Boolean> verifyAuthy(UUID uuid, String token, Tokens tokens, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
         if (debug) {
             logger.info("Verifying " + uuid + " with " + token);
         }
@@ -211,6 +226,54 @@ public class InternalAPI {
 
         verificationCache.put(uuid, Boolean.TRUE);
         return Optional.of(Boolean.TRUE);
+    }
+
+    public Optional<Boolean> verifyTOTP(UUID uuid, String token, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
+        if (debug) {
+            logger.info("Verifying " + uuid + " with " + token);
+        }
+
+        int intToken;
+        try {
+            intToken = Integer.parseInt(token);
+        } catch (NumberFormatException ex) {
+            logger.error(ex.getMessage(), ex);
+            return Optional.of(Boolean.FALSE);
+        }
+
+        LongObjectPair<SecretKey> pair = totpCache.get(uuid, k -> getTOTPExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug));
+        if (pair == null) {
+            logger.warn(uuid + " has not been registered.");
+            return Optional.empty();
+        }
+
+        TimeBasedOneTimePasswordGenerator totp;
+        try {
+            totp = new TimeBasedOneTimePasswordGenerator(30L, TimeUnit.SECONDS, (int) pair.getFirst(), ServiceKeys.TOTP_ALGORITM);
+        } catch (NoSuchAlgorithmException ex) {
+            logger.error(ex.getMessage(), ex);
+            return Optional.empty();
+        }
+
+        Date now = new Date();
+        // Step between 5 codes at different times
+        // This allows for a 2-minute drift on either side of the current time
+        for (int i = -2; i <= 2; i++) {
+            long step = totp.getTimeStep(TimeUnit.MILLISECONDS) * i;
+            Date d = new Date(now.getTime() + step);
+
+            try {
+                if (totp.generateOneTimePassword(pair.getSecond(), d) == intToken) {
+                    verificationCache.put(uuid, Boolean.TRUE);
+                    return Optional.of(Boolean.TRUE);
+                }
+            } catch (InvalidKeyException ex) {
+                logger.error(ex.getMessage(), ex);
+                return Optional.empty();
+            }
+        }
+
+        return Optional.of(Boolean.FALSE);
     }
 
     public boolean isRegistered(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {

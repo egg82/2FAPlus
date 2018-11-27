@@ -5,9 +5,11 @@ import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import javax.crypto.SecretKey;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.core.SQLFetchResult;
+import me.egg82.tfaplus.core.TOTPData;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
 import ninja.egg82.sql.SQL;
@@ -57,6 +59,22 @@ public class MySQL {
             }
 
             try {
+                SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "totp';", databaseName);
+                if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
+                    return;
+                }
+
+                sql.execute("CREATE TABLE `" + tablePrefix + "totp` ("
+                        + "`uuid` VARCHAR(36) NOT NULL,"
+                        + "`length` BIGINT NOT NULL DEFAULT 0,"
+                        + "`key` BLOB NOT NULL"
+                        + ");");
+                sql.execute("ALTER TABLE `" + tablePrefix + "totp` ADD UNIQUE (`uuid`);");
+            } catch (SQLException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "login_queue';", databaseName);
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
                     return;
@@ -88,6 +106,23 @@ public class MySQL {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
+
+            try {
+                SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "totp_queue';", databaseName);
+                if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
+                    return;
+                }
+
+                sql.execute("CREATE TABLE `" + tablePrefix + "totp_queue` ("
+                        + "`uuid` VARCHAR(36) NOT NULL,"
+                        + "`length` BIGINT NOT NULL DEFAULT 0,"
+                        + "`key` BLOB NOT NULL,"
+                        + "`updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                        + ");");
+                sql.execute("ALTER TABLE `" + tablePrefix + "totp_queue` ADD UNIQUE (`uuid`);");
+            } catch (SQLException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
         });
     }
 
@@ -97,6 +132,7 @@ public class MySQL {
         return CompletableFuture.supplyAsync(() -> {
             List<LoginData> loginData = new ArrayList<>();
             List<AuthyData> authyData = new ArrayList<>();
+            List<TOTPData> totpData = new ArrayList<>();
             List<String> removedKeys = new ArrayList<>();
 
             try {
@@ -153,7 +189,31 @@ public class MySQL {
                 logger.error(ex.getMessage(), ex);
             }
 
-            return new SQLFetchResult(loginData.toArray(new LoginData[0]), authyData.toArray(new AuthyData[0]), removedKeys.toArray(new String[0]));
+            try {
+                SQLQueryResult query = sql.query("SELECT `uuid`, `length`, `key` FROM `" + tablePrefix + "totp`;");
+
+                // Iterate rows
+                for (Object[] o : query.getData()) {
+                    // Validate UUID/IP and remove bad data
+                    if (!ValidationUtil.isValidUuid((String) o[0])) {
+                        removedKeys.add("2faplus:uuid:" + o[0]);
+                        removedKeys.add("2faplus:totp:" + o[0]);
+                        sql.execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", o[0]);
+                        continue;
+                    }
+
+                    // Grab all data and convert to more useful object types
+                    UUID uuid = UUID.fromString((String) o[0]);
+                    long length = ((Number) o[1]).longValue();
+                    byte[] key = (byte[]) o[2];
+
+                    totpData.add(new TOTPData(uuid, length, key));
+                }
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            return new SQLFetchResult(loginData.toArray(new LoginData[0]), authyData.toArray(new AuthyData[0]), totpData.toArray(new TOTPData[0]), removedKeys.toArray(new String[0]));
         });
     }
 
@@ -163,6 +223,7 @@ public class MySQL {
         return CompletableFuture.supplyAsync(() -> {
             List<LoginData> loginData = new ArrayList<>();
             List<AuthyData> authyData = new ArrayList<>();
+            List<TOTPData> totpData = new ArrayList<>();
             List<String> removedKeys = new ArrayList<>();
 
             try {
@@ -220,13 +281,38 @@ public class MySQL {
             }
 
             try {
+                SQLQueryResult query = sql.query("SELECT `uuid`, `length`, `key` FROM `" + tablePrefix + "totp_queue`;");
+
+                // Iterate rows
+                for (Object[] o : query.getData()) {
+                    // Validate UUID/IP and remove bad data
+                    if (!ValidationUtil.isValidUuid((String) o[0])) {
+                        removedKeys.add("2faplus:uuid:" + o[0]);
+                        removedKeys.add("2faplus:totp:" + o[0]);
+                        sql.execute("DELETE FROM `" + tablePrefix + "totp_queue` WHERE `uuid`=?;", o[0]);
+                        continue;
+                    }
+
+                    // Grab all data and convert to more useful object types
+                    UUID uuid = UUID.fromString((String) o[0]);
+                    long length = ((Number) o[1]).longValue();
+                    byte[] key = (byte[]) o[2];
+
+                    totpData.add(new TOTPData(uuid, length, key));
+                }
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            try {
                 sql.execute("DELETE FROM `" + tablePrefix + "login_queue` WHERE `updated` <= CURRENT_TIMESTAMP() - INTERVAL 2 MINUTE;");
                 sql.execute("DELETE FROM `" + tablePrefix + "authy_queue` WHERE `updated` <= CURRENT_TIMESTAMP() - INTERVAL 2 MINUTE;");
+                sql.execute("DELETE FROM `" + tablePrefix + "totp_queue` WHERE `updated` <= CURRENT_TIMESTAMP() - INTERVAL 2 MINUTE;");
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
 
-            return new SQLFetchResult(loginData.toArray(new LoginData[0]), authyData.toArray(new AuthyData[0]), removedKeys.toArray(new String[0]));
+            return new SQLFetchResult(loginData.toArray(new LoginData[0]), authyData.toArray(new AuthyData[0]), totpData.toArray(new TOTPData[0]), removedKeys.toArray(new String[0]));
         });
     }
 
@@ -276,6 +362,30 @@ public class MySQL {
         });
     }
 
+    public static CompletableFuture<TOTPData> getTOTPData(UUID uuid, SQL sql, ConfigurationNode storageConfigNode) {
+        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
+
+        return CompletableFuture.supplyAsync(() -> {
+            TOTPData data = null;
+
+            try {
+                SQLQueryResult query = sql.query("SELECT `length`, `key` FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid.toString());
+
+                // Iterate rows
+                for (Object[] o : query.getData()) {
+                    // Grab all data and convert to more useful object types
+                    long length = ((Number) o[0]).longValue();
+                    byte[] key = (byte[]) o[1];
+                    data = new TOTPData(uuid, length, key);
+                }
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            return data;
+        });
+    }
+
     public static CompletableFuture<LoginData> updateLogin(SQL sql, ConfigurationNode storageConfigNode, UUID uuid, String ip) {
         String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
 
@@ -312,6 +422,20 @@ public class MySQL {
         });
     }
 
+    public static CompletableFuture<TOTPData> updateTOTP(SQL sql, ConfigurationNode storageConfigNode, UUID uuid, long length, SecretKey key) {
+        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                sql.execute("INSERT INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES(?, ?, ?) ON DUPLICATE KEY UPDATE `length`=?, `key`=?;", uuid.toString(), length, key, length, key);
+            } catch (SQLException | ClassCastException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            return new TOTPData(uuid, length, key);
+        });
+    }
+
     public static CompletableFuture<Void> delete(UUID uuid, SQL sql, ConfigurationNode storageConfigNode) {
         String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
 
@@ -319,6 +443,7 @@ public class MySQL {
             try {
                 sql.execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid.toString());
                 sql.execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid.toString());
+                sql.execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid.toString());
             } catch (SQLException | ClassCastException ex) {
                 logger.error(ex.getMessage(), ex);
             }
