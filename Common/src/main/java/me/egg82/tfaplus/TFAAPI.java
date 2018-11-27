@@ -61,17 +61,17 @@ public class TFAAPI {
     }
 
     /**
-     * Register a new user from an existing player
+     * Register a new Authy user from an existing player
      *
      * @param uuid The player UUID
      * @param email The user's e-mail address
      * @param phone The user's phone number
      * @return Whether or not the registration was successful
      */
-    public boolean register(UUID uuid, String email, String phone) { return register(uuid, email, phone, "1"); }
+    public boolean registerAuthy(UUID uuid, String email, String phone) { return registerAuthy(uuid, email, phone, "1"); }
 
     /**
-     * Register a new user from an existing player
+     * Register a new Authy user from an existing player
      *
      * @param uuid The player UUID
      * @param email The user's e-mail address
@@ -79,7 +79,7 @@ public class TFAAPI {
      * @param countryCode The user's phone numbers' country code
      * @return Whether or not the registration was successful
      */
-    public boolean register(UUID uuid, String email, String phone, String countryCode) {
+    public boolean registerAuthy(UUID uuid, String email, String phone, String countryCode) {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
@@ -114,12 +114,47 @@ public class TFAAPI {
         }
 
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.register(uuid, email, phone, countryCode, cachedConfig.getAuthy().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            return internalApi.registerAuthy(uuid, email, phone, countryCode, cachedConfig.getAuthy().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
 
-        return internalApi.register(uuid, email, phone, countryCode, cachedConfig.getAuthy().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return internalApi.registerAuthy(uuid, email, phone, countryCode, cachedConfig.getAuthy().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+    }
+
+    /**
+     * Register a new TOTP user from an existing player
+     *
+     * @param uuid The player UUID
+     * @param codeLength The length of the TOTP code (eg. 6 would generate a 6-digit code)
+     * @return A base64-encoded private key, or null if error
+     */
+    public String registerTOTP(UUID uuid, long codeLength) {
+        if (uuid == null) {
+            throw new IllegalArgumentException("uuid cannot be null.");
+        }
+        if (codeLength <= 0) {
+            throw new IllegalArgumentException("codeLength cannot be <= 0.");
+        }
+
+        CachedConfigValues cachedConfig;
+        Configuration config;
+
+        try {
+            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+            config = ServiceLocator.get(Configuration.class);
+        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+            logger.error(ex.getMessage(), ex);
+            return null;
+        }
+
+        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
+            return internalApi.registerTOTP(uuid, codeLength, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } catch (IOException | TimeoutException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+
+        return internalApi.registerTOTP(uuid, codeLength, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
     }
 
     /**
@@ -229,11 +264,23 @@ public class TFAAPI {
         }
 
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.verify(uuid, token, cachedConfig.getAuthy().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            if (internalApi.hasAuthy(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
+                return internalApi.verifyAuthy(uuid, token, cachedConfig.getAuthy().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            } else if (internalApi.hasTOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
+                return internalApi.verifyTOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            } else {
+                return Optional.empty();
+            }
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
 
-        return internalApi.verify(uuid, token, cachedConfig.getAuthy().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        if (internalApi.hasAuthy(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
+            return internalApi.verifyAuthy(uuid, token, cachedConfig.getAuthy().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } else if (internalApi.hasTOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
+            return internalApi.verifyTOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } else {
+            return Optional.empty();
+        }
     }
 }
