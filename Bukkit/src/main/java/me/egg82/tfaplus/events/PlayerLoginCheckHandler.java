@@ -1,7 +1,6 @@
 package me.egg82.tfaplus.events;
 
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ShutdownSignalException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Optional;
@@ -20,7 +19,6 @@ import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
@@ -103,8 +101,6 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
     private boolean canLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
             return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (ShutdownSignalException ignored) {
-
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }

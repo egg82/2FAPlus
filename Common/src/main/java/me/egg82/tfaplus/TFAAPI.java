@@ -1,7 +1,6 @@
 package me.egg82.tfaplus;
 
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ShutdownSignalException;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
@@ -115,8 +114,6 @@ public class TFAAPI {
 
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
             return internalApi.registerAuthy(uuid, email, phone, countryCode, cachedConfig.getAuthy().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (ShutdownSignalException ignored) {
-
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
@@ -152,8 +149,6 @@ public class TFAAPI {
 
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
             return internalApi.registerTOTP(uuid, codeLength, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (ShutdownSignalException ignored) {
-
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
@@ -185,8 +180,6 @@ public class TFAAPI {
 
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
             return internalApi.isRegistered(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (ShutdownSignalException ignored) {
-
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
@@ -218,8 +211,6 @@ public class TFAAPI {
 
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
             return internalApi.delete(uuid, cachedConfig.getAuthy().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (ShutdownSignalException ignored) {
-
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
@@ -279,8 +270,6 @@ public class TFAAPI {
             } else {
                 return Optional.empty();
             }
-        } catch (ShutdownSignalException ignored) {
-
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
