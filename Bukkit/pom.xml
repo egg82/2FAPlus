@@ -37,6 +37,10 @@
                             <shadedPattern>me.egg82.tfaplus.external.com.github.benmanes.caffeine</shadedPattern>
                         </relocation>
                         <relocation>
+                            <pattern>com.github.jaiimageio</pattern>
+                            <shadedPattern>me.egg82.tfaplus.external.com.github.jaiimageio</shadedPattern>
+                        </relocation>
+                        <relocation>
                             <pattern>com.zaxxer.hikari</pattern>
                             <shadedPattern>me.egg82.tfaplus.external.com.zaxxer.hikari</shadedPattern>
                         </relocation>
@@ -80,6 +84,10 @@
                             <excludes>
                                 <exclude>com.google.common.*</exclude>
                             </excludes>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.eatthepath</pattern>
+                            <shadedPattern>me.egg82.tfaplus.external.com.eatthepath</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.googlecode</pattern>
@@ -156,6 +164,7 @@
                                     <excludes>
                                         <!-- included or useless -->
                                         <exclude>LICENSE*</exclude>
+                                        <exclude>com/beust/jcommander/**</exclude>
                                         <exclude>com/google/common/**</exclude>
                                         <exclude>javax/annotation/**</exclude>
                                         <exclude>junit/**</exclude>
@@ -166,6 +175,7 @@
                                         <exclude>org/yaml/snakeyaml/**</exclude>
 
                                         <!-- dep-injected -->
+                                        <exclude>com/github/jaiimageio/**</exclude>
                                         <exclude>com/rabbitmq/**</exclude>
                                         <exclude>com/zaxxer/hikari/**</exclude>
                                         <exclude>javassist/**</exclude>

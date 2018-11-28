@@ -115,6 +115,13 @@ public class BukkitBootstrap extends JavaPlugin {
                 classLoader,
                 Collections.singletonList(new Relocation(parse("org{}apache{}commons{}net"), parse(externalPath + "{}org{}apache{}commons{}net"))));
 
+        log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Loading dep " + ChatColor.WHITE + "JAI ImageIO Core");
+        JarUtil.loadJar("http://central.maven.org/maven2/com/github/jai-imageio/jai-imageio-core/1.4.0/jai-imageio-core-1.4.0.jar",
+                new File(jarsFolder, "jai-imageio-core-1.4.0.jar"),
+                new File(jarsFolder, "jai-imageio-core-1.4.0-relocated.jar"),
+                classLoader,
+                Collections.singletonList(new Relocation(parse("com{}github{}jaiimageio"), parse(externalPath + "{}com{}github{}jaiimageio"))));
+
         try {
             Class.forName("org.reflections.Reflections", false, classLoader);
         } catch (ClassNotFoundException ignored) {
