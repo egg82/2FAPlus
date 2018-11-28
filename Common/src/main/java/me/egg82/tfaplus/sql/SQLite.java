@@ -40,7 +40,7 @@ public class SQLite {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
-
+        }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='" + tablePrefix + "authy';");
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
@@ -55,7 +55,7 @@ public class SQLite {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
-
+        }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='" + tablePrefix + "totp';");
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {

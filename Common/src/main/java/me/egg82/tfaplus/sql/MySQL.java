@@ -42,7 +42,7 @@ public class MySQL {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
-
+        }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "authy';", databaseName);
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
@@ -57,7 +57,7 @@ public class MySQL {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
-
+        }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "totp';", databaseName);
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
@@ -73,7 +73,7 @@ public class MySQL {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
-
+        }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "login_queue';", databaseName);
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
@@ -90,7 +90,7 @@ public class MySQL {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
-
+        }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "authy_queue';", databaseName);
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
@@ -106,7 +106,7 @@ public class MySQL {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
-
+        }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "totp_queue';", databaseName);
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {

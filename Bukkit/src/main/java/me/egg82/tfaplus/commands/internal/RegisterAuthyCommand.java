@@ -12,7 +12,7 @@ import org.bukkit.command.CommandSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RegisterCommand implements Runnable {
+public class RegisterAuthyCommand implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final TaskChain<?> chain;
@@ -24,7 +24,7 @@ public class RegisterCommand implements Runnable {
 
     private final TFAAPI api = TFAAPI.getInstance();
 
-    public RegisterCommand(TaskChain<?> chain, CommandSender sender, String playerName, String email, String countryCode, String phone) {
+    public RegisterAuthyCommand(TaskChain<?> chain, CommandSender sender, String playerName, String email, String countryCode, String phone) {
         this.chain = chain;
         this.sender = sender;
         this.playerName = playerName;
@@ -44,7 +44,7 @@ public class RegisterCommand implements Runnable {
                         sender.sendMessage(ChatColor.DARK_RED + "Could not get UUID for " + ChatColor.WHITE + playerName + ChatColor.DARK_RED + " (rate-limited?)");
                     }
                 })
-                .<Boolean>asyncCallback((v, f) -> f.accept(countryCode != null ? api.register(v, email, phone, countryCode) : api.register(v, email, phone)))
+                .<Boolean>asyncCallback((v, f) -> f.accept(countryCode != null ? api.registerAuthy(v, email, phone, countryCode) : api.registerAuthy(v, email, phone)))
                 .syncLast(v -> sender.sendMessage(LogUtil.getHeading() + (v ? ChatColor.WHITE + playerName + ChatColor.GREEN + " has been successfully registered." : ChatColor.DARK_RED + "Could not register " + ChatColor.WHITE + playerName)))
                 .execute();
     }

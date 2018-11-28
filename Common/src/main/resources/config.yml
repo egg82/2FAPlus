@@ -76,10 +76,10 @@ authy:
   # Authy API key. Required.
   key: ''
 
-# TOTP is used as one of the available 2FA services.
+# OTP (used for TOTP and HOTP) is used as one of the available 2FA services.
 # This can be used with any service that takes a QR code
-# eg. Google Authenticator
-totp:
+# eg. Google Authenticator, LastPass, or Microsoft Authenticator
+otp:
   # The number of digits to generate
   digits: 6
   # The business/organization name that shows up on the 2FA app when scanning the QR code

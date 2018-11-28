@@ -5,10 +5,7 @@ import co.aikar.commands.CommandHelp;
 import co.aikar.commands.annotation.*;
 import co.aikar.taskchain.TaskChainFactory;
 import me.egg82.tfaplus.TFAPlus;
-import me.egg82.tfaplus.commands.internal.CheckCommand;
-import me.egg82.tfaplus.commands.internal.DeleteCommand;
-import me.egg82.tfaplus.commands.internal.RegisterCommand;
-import me.egg82.tfaplus.commands.internal.ReloadCommand;
+import me.egg82.tfaplus.commands.internal.*;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
@@ -32,13 +29,22 @@ public class TFAPlusCommand extends BaseCommand {
         new ReloadCommand(concrete, plugin, taskFactory.newChain(), sender).run();
     }
 
-    @Subcommand("register|create|add")
+    @Subcommand("register|create|add authy")
     @CommandPermission("2faplus.admin")
-    @Description("Registers a player in the 2FA system. Valid country codes can be found at https://countrycode.org/")
+    @Description("Registers a player in the Authy 2FA system. Valid country codes can be found at https://countrycode.org/")
     @Syntax("<player> <email> [phone-country-code] <phone-number>")
     @CommandCompletion("@player")
-    public void onRegister(CommandSender sender, String playerName, String email, String countryCode, String phone) {
-        new RegisterCommand(taskFactory.newChain(), sender, playerName, email, countryCode, phone).run();
+    public void onRegisterAuthy(CommandSender sender, String playerName, String email, String countryCode, String phone) {
+        new RegisterAuthyCommand(taskFactory.newChain(), sender, playerName, email, countryCode, phone).run();
+    }
+
+    @Subcommand("register|create|add totp")
+    @CommandPermission("2faplus.admin")
+    @Description("Registers a player in the TOTP 2FA system. For Google, Microsoft, LastPass, etc.")
+    @Syntax("<player>")
+    @CommandCompletion("@player")
+    public void onRegisterTOTP(CommandSender sender, String playerName) {
+        new RegisterTOTPCommand(taskFactory.newChain(), sender, playerName).run();
     }
 
     @Subcommand("remove|delete")
