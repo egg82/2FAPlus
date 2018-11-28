@@ -131,7 +131,7 @@ public class TFAAPI {
      *
      * @param uuid The player UUID
      * @param codeLength The length of the TOTP code (eg. 6 would generate a 6-digit code)
-     * @return A base64-encoded private key, or null if error
+     * @return A base32-encoded private key, or null if error
      */
     public String registerTOTP(UUID uuid, long codeLength) {
         if (uuid == null) {
@@ -159,6 +159,51 @@ public class TFAAPI {
         }
 
         return internalApi.registerTOTP(uuid, codeLength, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+    }
+
+    /**
+     * Register a new HOTP user from an existing player
+     *
+     * @param uuid The player UUID
+     * @param codeLength The length of the HOTP code (eg. 6 would generate a 6-digit code)
+     * @return A base32-encoded private key, or null if error
+     */
+    public String registerHOTP(UUID uuid, long codeLength) { return registerHOTP(uuid, codeLength, 0L); }
+
+    /**
+     * Register a new HOTP user from an existing player
+     *
+     * @param uuid The player UUID
+     * @param codeLength The length of the HOTP code (eg. 6 would generate a 6-digit code)
+     * @param initialCounterValue The initial value of the HOTP counter
+     * @return A base32-encoded private key, or null if error
+     */
+    public String registerHOTP(UUID uuid, long codeLength, long initialCounterValue) {
+        if (uuid == null) {
+            throw new IllegalArgumentException("uuid cannot be null.");
+        }
+        if (codeLength <= 0) {
+            throw new IllegalArgumentException("codeLength cannot be <= 0.");
+        }
+
+        CachedConfigValues cachedConfig;
+        Configuration config;
+
+        try {
+            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+            config = ServiceLocator.get(Configuration.class);
+        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+            logger.error(ex.getMessage(), ex);
+            return null;
+        }
+
+        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
+            return internalApi.registerHOTP(uuid, codeLength, initialCounterValue, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } catch (IOException | TimeoutException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+
+        return internalApi.registerHOTP(uuid, codeLength, initialCounterValue, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
     }
 
     /**
@@ -272,6 +317,8 @@ public class TFAAPI {
                 return internalApi.verifyAuthy(uuid, token, cachedConfig.getAuthy().get().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
             } else if (internalApi.hasTOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
                 return internalApi.verifyTOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            } else if (internalApi.hasHOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
+                return internalApi.verifyHOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
             } else {
                 return Optional.empty();
             }
@@ -283,6 +330,8 @@ public class TFAAPI {
             return internalApi.verifyAuthy(uuid, token, cachedConfig.getAuthy().get().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
         } else if (internalApi.hasTOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
             return internalApi.verifyTOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } else if (internalApi.hasHOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
+            return internalApi.verifyHOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
         } else {
             return Optional.empty();
         }

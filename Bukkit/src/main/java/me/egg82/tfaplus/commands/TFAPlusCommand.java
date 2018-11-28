@@ -47,6 +47,15 @@ public class TFAPlusCommand extends BaseCommand {
         new RegisterTOTPCommand(taskFactory.newChain(), sender, playerName).run();
     }
 
+    @Subcommand("register|create|add hotp")
+    @CommandPermission("2faplus.admin")
+    @Description("Registers a player in the HOTP 2FA system. For YubiKey, NitroKey, etc.")
+    @Syntax("<player>")
+    @CommandCompletion("@player")
+    public void onRegisterHOTP(CommandSender sender, String playerName) {
+        new RegisterHOTPCommand(taskFactory.newChain(), sender, playerName).run();
+    }
+
     @Subcommand("remove|delete")
     @CommandPermission("2faplus.admin")
     @Description("Removes a player in the 2FA system.")

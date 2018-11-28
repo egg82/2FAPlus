@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.core.AuthyData;
+import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.core.TOTPData;
 import me.egg82.tfaplus.utils.RabbitMQUtil;
@@ -99,6 +100,32 @@ public class RabbitMQ {
 
                 channel.exchangeDeclare("2faplus-totp", "fanout");
                 channel.basicPublish("2faplus-totp", "", null, obj.toJSONString().getBytes(utf8));
+
+                return Boolean.TRUE;
+            } catch (IOException | TimeoutException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+
+            return Boolean.FALSE;
+        });
+    }
+
+    public static CompletableFuture<Boolean> broadcast(HOTPData sqlResult, Connection connection) {
+        return CompletableFuture.supplyAsync(() -> {
+            try (Channel channel = RabbitMQUtil.getChannel(connection)) {
+                if (channel == null) {
+                    return Boolean.FALSE;
+                }
+
+                JSONObject obj = new JSONObject();
+                obj.put("uuid", sqlResult.getUUID().toString());
+                obj.put("length", sqlResult.getLength());
+                obj.put("counter", sqlResult.getCounter());
+                obj.put("key", encoder.encodeToString(sqlResult.getKey().getEncoded()));
+                obj.put("id", serverId.toString());
+
+                channel.exchangeDeclare("2faplus-hotp", "fanout");
+                channel.basicPublish("2faplus-hotp", "", null, obj.toJSONString().getBytes(utf8));
 
                 return Boolean.TRUE;
             } catch (IOException | TimeoutException ex) {

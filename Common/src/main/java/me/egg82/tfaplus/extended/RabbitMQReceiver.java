@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.core.AuthyData;
+import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.core.TOTPData;
 import me.egg82.tfaplus.services.InternalAPI;
@@ -50,6 +51,9 @@ public class RabbitMQReceiver {
 
             String totpQueueName = channel.queueDeclare().getQueue();
             channel.queueBind(totpQueueName, "2faplus-totp", "");
+
+            String hotpQueueName = channel.queueDeclare().getQueue();
+            channel.queueBind(hotpQueueName, "2faplus-hotp", "");
 
             String deleteQueueName = channel.queueDeclare().getQueue();
             channel.queueBind(deleteQueueName, "2faplus-delete", "");
@@ -156,6 +160,40 @@ public class RabbitMQReceiver {
                 }
             };
             channel.basicConsume(totpQueueName, true, totpConsumer);
+
+            Consumer hotpConsumer = new DefaultConsumer(channel) {
+                public void handleDelivery(String tag, Envelope envelope, AMQP.BasicProperties properies, byte[] body) throws IOException {
+                    String message = new String(body, "UTF-8");
+
+                    try {
+                        JSONObject obj = JSONUtil.parseObject(message);
+
+                        if (!ValidationUtil.isValidUuid((String) obj.get("uuid"))) {
+                            logger.warn("non-valid UUID sent through RabbitMQ");
+                            return;
+                        }
+
+                        UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                        long length = ((Number) obj.get("length")).longValue();
+                        long counter = ((Number) obj.get("counter")).longValue();
+                        byte[] key = decoder.decode((String) obj.get("key"));
+                        UUID id = UUID.fromString((String) obj.get("id"));
+
+                        if (id.equals(RabbitMQ.getServerID())) {
+                            logger.info("ignoring message sent from this server");
+                            return;
+                        }
+
+                        CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+                        Configuration config = ServiceLocator.get(Configuration.class);
+
+                        InternalAPI.add(new HOTPData(uuid, length, counter, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                        logger.error(ex.getMessage(), ex);
+                    }
+                }
+            };
+            channel.basicConsume(hotpQueueName, true, hotpConsumer);
 
             Consumer deleteConsumer = new DefaultConsumer(channel) {
                 public void handleDelivery(String tag, Envelope envelope, AMQP.BasicProperties properies, byte[] body) throws IOException {

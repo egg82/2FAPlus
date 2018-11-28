@@ -3,6 +3,7 @@ package me.egg82.tfaplus.extended;
 import java.util.Base64;
 import java.util.UUID;
 import me.egg82.tfaplus.core.AuthyData;
+import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.core.TOTPData;
 import me.egg82.tfaplus.services.InternalAPI;
@@ -104,6 +105,27 @@ public class RedisSubscriber {
                     Configuration config = ServiceLocator.get(Configuration.class);
 
                     InternalAPI.add(new TOTPData(uuid, length, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (channel.equals("2faplus-hotp")) {
+                try {
+                    JSONObject obj = JSONUtil.parseObject(message);
+                    UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                    long length = ((Number) obj.get("length")).longValue();
+                    long counter = ((Number) obj.get("counter")).longValue();
+                    byte[] key = decoder.decode((String) obj.get("key"));
+                    UUID id = UUID.fromString((String) obj.get("id"));
+
+                    if (id.equals(Redis.getServerID())) {
+                        logger.info("ignoring message sent from this server");
+                        return;
+                    }
+
+                    CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+                    Configuration config = ServiceLocator.get(Configuration.class);
+
+                    InternalAPI.add(new HOTPData(uuid, length, counter, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
                 } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
