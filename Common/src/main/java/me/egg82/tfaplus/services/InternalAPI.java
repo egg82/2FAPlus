@@ -17,6 +17,8 @@ import java.util.concurrent.TimeUnit;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import me.egg82.tfaplus.core.*;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.ServiceKeys;
@@ -459,6 +461,99 @@ public class InternalAPI {
 
         // Rabbit
         RabbitMQ.broadcast(result, rabbitConnection);
+
+        // Cache
+        hotpCache.put(uuid, new HOTPCacheData(length, counter, key));
+    }
+
+    public boolean seekHOTPCounter(UUID uuid, String[] tokens, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
+        if (debug) {
+            logger.info("Seeking HOTP counter for " + uuid);
+        }
+
+        HOTPCacheData data = hotpCache.get(uuid, k -> getHOTPExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug));
+        if (data == null) {
+            logger.warn(uuid + " has not been registered.");
+            return false;
+        }
+
+        HmacOneTimePasswordGenerator hotp;
+        try {
+            hotp = new HmacOneTimePasswordGenerator((int) data.getLength());
+        } catch (NoSuchAlgorithmException ex) {
+            logger.error(ex.getMessage(), ex);
+            return false;
+        }
+
+        IntList intTokens = new IntArrayList();
+        for (String token : tokens) {
+            int intToken;
+            try {
+                intToken = Integer.parseInt(token);
+            } catch (NumberFormatException ex) {
+                logger.error(ex.getMessage(), ex);
+                return false;
+            }
+            intTokens.add(intToken);
+        }
+
+        int counter = -1;
+
+        for (int i = 0; i <= 2000; i++) {
+            try {
+                if (hotp.generateOneTimePassword(data.getKey(), data.getCounter() + i) == intTokens.getInt(0)) {
+                    boolean good = true;
+                    for (int j = 1; j < intTokens.size(); j++) {
+                        if (hotp.generateOneTimePassword(data.getKey(), data.getCounter() + i + j) != intTokens.getInt(j)) {
+                            good = false;
+                            break;
+                        }
+                    }
+
+                    if (good) {
+                        counter = i;
+                        break;
+                    }
+                }
+            } catch (InvalidKeyException ex) {
+                logger.error(ex.getMessage(), ex);
+                return false;
+            }
+        }
+
+        if (counter < 0) {
+            return false;
+        }
+
+        // SQL
+        HOTPData result = null;
+        try {
+            if (sqlType == SQLType.MySQL) {
+                result = MySQL.updateHOTP(sql, storageConfigNode, uuid, data.getLength(), counter, data.getKey()).get();
+            } else if (sqlType == SQLType.SQLite) {
+                result = SQLite.updateHOTP(sql, storageConfigNode, uuid, data.getLength(), counter, data.getKey()).get();
+            }
+        } catch (ExecutionException ex) {
+            logger.error(ex.getMessage(), ex);
+        } catch (InterruptedException ex) {
+            logger.error(ex.getMessage(), ex);
+            Thread.currentThread().interrupt();
+        }
+
+        if (result == null) {
+            return false;
+        }
+
+        // Redis
+        Redis.update(result, redisPool, redisConfigNode);
+
+        // Rabbit
+        RabbitMQ.broadcast(result, rabbitConnection);
+
+        // Cache
+        hotpCache.put(uuid, new HOTPCacheData(data.getLength(), counter, data.getKey()));
+
+        return true;
     }
 
     public boolean hasAuthy(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {

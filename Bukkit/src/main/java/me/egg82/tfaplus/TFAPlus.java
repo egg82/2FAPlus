@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
+
+import me.egg82.tfaplus.commands.HOTPCommand;
 import me.egg82.tfaplus.commands.TFAPlusCommand;
 import me.egg82.tfaplus.core.SQLFetchResult;
 import me.egg82.tfaplus.enums.SQLType;
@@ -272,7 +274,20 @@ public class TFAPlus {
             return ImmutableList.copyOf(commands);
         });
 
+        commandManager.getCommandCompletions().registerCompletion("hotp-subcommand", c -> {
+            String lower = c.getInput().toLowerCase();
+            Set<String> commands = new LinkedHashSet<>();
+            SetMultimap<String, RegisteredCommand> subcommands = commandManager.getRootCommand("hotp").getSubCommands();
+            for (Map.Entry<String, RegisteredCommand> kvp : subcommands.entries()) {
+                if (!kvp.getValue().isPrivate() && (lower.isEmpty() || kvp.getKey().toLowerCase().startsWith(lower)) && kvp.getValue().getCommand().indexOf(' ') == -1) {
+                    commands.add(kvp.getValue().getCommand());
+                }
+            }
+            return ImmutableList.copyOf(commands);
+        });
+
         commandManager.registerCommand(new TFAPlusCommand(this, plugin, taskFactory));
+        commandManager.registerCommand(new HOTPCommand(taskFactory));
     }
 
     private void loadEvents() {

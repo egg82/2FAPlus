@@ -2,6 +2,7 @@ package me.egg82.tfaplus;
 
 import com.rabbitmq.client.Connection;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -185,6 +186,9 @@ public class TFAAPI {
         if (codeLength <= 0) {
             throw new IllegalArgumentException("codeLength cannot be <= 0.");
         }
+        if (initialCounterValue < 0) {
+            throw new IllegalArgumentException("initialCounterValue cannot be < 0.");
+        }
 
         CachedConfigValues cachedConfig;
         Configuration config;
@@ -204,6 +208,69 @@ public class TFAAPI {
         }
 
         return internalApi.registerHOTP(uuid, codeLength, initialCounterValue, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+    }
+
+    /**
+     * Re-synchronizes the server HOTP counter with the user's HOTP counter
+     * using the tokens provided. The tokens will be a sequence provided from the client
+     * that the server will then "seek" to in order to re-set the counter.
+     *
+     * eg. The user will generate the next X number of tokens from their client (in order) and
+     * the server will then re-set its counter to match that of the client's using that token sequence.
+     *
+     * @param uuid The player UUID
+     * @param tokens The token sequence provided by the user
+     * @return Whether or not the seek/re-set was successful.
+     */
+    public boolean seekHOTPCounter(UUID uuid, Collection<String> tokens) {
+        if (tokens == null) {
+            throw new IllegalArgumentException("tokens cannot be null.");
+        }
+
+        return seekHOTPCounter(uuid, tokens.toArray(new String[0]));
+    }
+
+    /**
+     * Re-synchronizes the server HOTP counter with the user's HOTP counter
+     * using the tokens provided. The tokens will be a sequence provided from the client
+     * that the server will then "seek" to in order to re-set the counter.
+     *
+     * eg. The user will generate the next X number of tokens from their client (in order) and
+     * the server will then re-set its counter to match that of the client's using that token sequence.
+     *
+     * @param uuid The player UUID
+     * @param tokens The token sequence provided by the user
+     * @return Whether or not the seek/re-set was successful.
+     */
+    public boolean seekHOTPCounter(UUID uuid, String[] tokens) {
+        if (uuid == null) {
+            throw new IllegalArgumentException("uuid cannot be null.");
+        }
+        if (tokens == null) {
+            throw new IllegalArgumentException("tokens cannot be null.");
+        }
+        if (tokens.length <= 1) {
+            throw new IllegalArgumentException("tokens length cannot be <= 1");
+        }
+
+        CachedConfigValues cachedConfig;
+        Configuration config;
+
+        try {
+            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
+            config = ServiceLocator.get(Configuration.class);
+        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+            logger.error(ex.getMessage(), ex);
+            return false;
+        }
+
+        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
+            return internalApi.seekHOTPCounter(uuid, tokens, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } catch (IOException | TimeoutException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+
+        return internalApi.seekHOTPCounter(uuid, tokens, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
     }
 
     /**

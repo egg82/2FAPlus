@@ -7,6 +7,7 @@ import com.zaxxer.hikari.HikariConfig;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -94,12 +95,19 @@ public class ConfigurationFileUtil {
             commands = new HashSet<>();
         }
 
-        for (String command : commands) {
+        Set<String> addedCommands = new HashSet<>();
+        for (Iterator<String> i = commands.iterator(); i.hasNext();) {
+            String command = i.next();
             if (command.charAt(0) == '/') {
-                commands.remove(command);
-                commands.add(command.substring(1));
+                i.remove();
+                addedCommands.add(command.substring(1));
+            }
+            String lower = command.toLowerCase();
+            if (lower.startsWith("hotp ") || command.equals("hotp") || lower.startsWith("2faplus:hotp")) {
+                i.remove();
             }
         }
+        commands.addAll(addedCommands);
 
         if (debug) {
             for (String command : commands) {

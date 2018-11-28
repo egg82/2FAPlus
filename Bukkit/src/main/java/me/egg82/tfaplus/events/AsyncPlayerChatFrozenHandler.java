@@ -4,6 +4,7 @@ import com.rabbitmq.client.Connection;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -18,6 +19,7 @@ import me.egg82.tfaplus.utils.LogUtil;
 import me.egg82.tfaplus.utils.RabbitMQUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
+import ninja.egg82.tuples.longs.LongObjectPair;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -36,6 +38,35 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
     public AsyncPlayerChatFrozenHandler(Plugin plugin) { this.plugin = plugin; }
 
     public void accept(AsyncPlayerChatEvent event) {
+        if (CollectionProvider.getHOTPFrozen().containsKey(event.getPlayer().getUniqueId())) {
+            String message = event.getMessage().replaceAll("\\s+", "").trim();
+            if (message.matches("\\d+")) {
+                event.setCancelled(true);
+
+                LongObjectPair<List<String>> pair = CollectionProvider.getHOTPFrozen().get(event.getPlayer().getUniqueId());
+                if (pair == null) {
+                    return;
+                }
+
+                pair.getSecond().add(message);
+
+                if (pair.getSecond().size() >= pair.getFirst()) {
+                    CollectionProvider.getHOTPFrozen().remove(event.getPlayer().getUniqueId());
+                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Attempting to re-synchronize your counter, please wait..");
+
+                    if (api.seekHOTPCounter(event.getPlayer().getUniqueId(), pair.getSecond())) {
+                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your counter has been successfully re-synchronized!");
+                    } else {
+                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your counter could not be re-synchronized using the codes provided. Please try again.");
+                    }
+                } else {
+                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.WHITE + (pair.getFirst() - pair.getSecond().size()) + ChatColor.YELLOW + " more code" + (pair.getFirst() - pair.getSecond().size() > 1 ? "s" : "") + " to go!");
+                }
+            }
+
+            return;
+        }
+
         if (CollectionProvider.getCommandFrozen().containsKey(event.getPlayer().getUniqueId())) {
             String message = event.getMessage().replaceAll("\\s+", "").trim();
             if (message.matches("\\d+")) {
