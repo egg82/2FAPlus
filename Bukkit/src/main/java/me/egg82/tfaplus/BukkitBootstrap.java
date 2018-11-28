@@ -155,6 +155,16 @@ public class BukkitBootstrap extends JavaPlugin {
         }
 
         try {
+            DriverManager.getDriver("org.sqlite.JDBC");
+        } catch (SQLException ignored) {
+            try {
+                DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, classLoader).newInstance());
+            } catch (ClassNotFoundException | InstantiationException | SQLException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+        }
+
+        try {
             Class.forName("com.mysql.jdbc.Driver", false, classLoader);
         } catch (ClassNotFoundException ignored) {
             log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Loading dep " + ChatColor.WHITE + "MySQL");
@@ -162,6 +172,16 @@ public class BukkitBootstrap extends JavaPlugin {
                     new File(jarsFolder, "mysql-connector-java-8.0.13.jar"),
                     classLoader);
 
+            try {
+                DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, classLoader).newInstance());
+            } catch (ClassNotFoundException | InstantiationException | SQLException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+        }
+
+        try {
+            DriverManager.getDriver("com.mysql.jdbc.Driver");
+        } catch (SQLException ignored) {
             try {
                 DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, classLoader).newInstance());
             } catch (ClassNotFoundException | InstantiationException | SQLException ex) {

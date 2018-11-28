@@ -194,7 +194,7 @@ public class InternalAPI {
             Thread.currentThread().interrupt();
         }
 
-        if (result != null) {
+        if (result != null && users != null) {
             Hash response;
             try {
                 response = users.deleteUser((int) result.getID());

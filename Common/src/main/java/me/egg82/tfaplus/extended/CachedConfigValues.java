@@ -4,6 +4,7 @@ import com.authy.AuthyApiClient;
 import com.google.common.collect.ImmutableSet;
 import com.rabbitmq.client.ConnectionFactory;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import me.egg82.tfaplus.core.FreezeConfigContainer;
 import me.egg82.tfaplus.enums.SQLType;
@@ -51,8 +52,8 @@ public class CachedConfigValues {
     private SQLType sqlType = SQLType.SQLite;
     public SQLType getSQLType() { return sqlType; }
 
-    private AuthyApiClient authy = null;
-    public AuthyApiClient getAuthy() { return authy; }
+    private Optional<AuthyApiClient> authy = null;
+    public Optional<AuthyApiClient> getAuthy() { return authy; }
 
     public static CachedConfigValues.Builder builder() { return new CachedConfigValues.Builder(); }
 
@@ -144,7 +145,7 @@ public class CachedConfigValues {
             return this;
         }
 
-        public CachedConfigValues.Builder authy(AuthyApiClient value) {
+        public CachedConfigValues.Builder authy(Optional<AuthyApiClient> value) {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }

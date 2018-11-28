@@ -284,7 +284,10 @@ public class TFAPlus {
         events.add(BukkitEvents.subscribe(InventoryDragEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryDragFrozenHandler().accept(e)));
         events.add(BukkitEvents.subscribe(InventoryMoveItemEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryMoveItemFrozenHandler().accept(e)));
         events.add(BukkitEvents.subscribe(PlayerPickupItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupItemFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerPickupArrowEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupArrowFrozenHandler().accept(e)));
+        try {
+            Class.forName("org.bukkit.event.player.PlayerPickupArrowEvent");
+            events.add(BukkitEvents.subscribe(PlayerPickupArrowEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupArrowFrozenHandler().accept(e)));
+        } catch (ClassNotFoundException ignored) {}
         events.add(BukkitEvents.subscribe(PlayerDropItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerDropItemFrozenHandler().accept(e)));
         events.add(BukkitEvents.subscribe(BlockPlaceEvent.class, EventPriority.HIGHEST).handler(e -> new BlockPlaceFrozenHandler().accept(e)));
         events.add(BukkitEvents.subscribe(BlockBreakEvent.class, EventPriority.HIGHEST).handler(e -> new BlockBreakFrozenHandler().accept(e)));

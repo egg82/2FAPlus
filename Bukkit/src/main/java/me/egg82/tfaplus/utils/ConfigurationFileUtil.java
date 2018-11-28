@@ -235,12 +235,12 @@ public class ConfigurationFileUtil {
         }
     }
 
-    private static AuthyApiClient getAuthy(String key, boolean debug) {
+    private static Optional<AuthyApiClient> getAuthy(String key, boolean debug) {
         if (key == null || key.isEmpty()) {
-            throw new IllegalArgumentException("authy.key must be available for 2FAPlus to work correctly. Please check the config for more info.");
+            return Optional.empty();
         }
 
-        return new AuthyApiClient(key, "https://api.authy.com/", debug);
+        return Optional.of(new AuthyApiClient(key, "https://api.authy.com/", debug));
     }
 
     private static SQL getSQL(Plugin plugin, ConfigurationNode storageConfigNode) {
