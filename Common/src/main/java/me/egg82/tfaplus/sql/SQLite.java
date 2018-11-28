@@ -104,7 +104,7 @@ public class SQLite {
                     // Grab all data and convert to more useful object types
                     UUID uuid = UUID.fromString((String) o[0]);
                     String ip = (String) o[1];
-                    long created = ((Timestamp) o[2]).getTime();
+                    long created = getTime(o[2]).getTime();
 
                     loginData.add(new LoginData(uuid, ip, created));
                 }
