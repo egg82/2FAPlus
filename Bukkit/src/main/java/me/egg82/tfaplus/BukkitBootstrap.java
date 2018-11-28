@@ -115,6 +115,13 @@ public class BukkitBootstrap extends JavaPlugin {
                 classLoader,
                 Collections.singletonList(new Relocation(parse("org{}apache{}commons{}net"), parse(externalPath + "{}org{}apache{}commons{}net"))));
 
+        log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Loading dep " + ChatColor.WHITE + "ZXing Core");
+        JarUtil.loadJar("http://central.maven.org/maven2/com/google/zxing/core/3.3.3/core-3.3.3.jar",
+                new File(jarsFolder, "zxing-core-3.3.3.jar"),
+                new File(jarsFolder, "zxing-core-3.3.3-relocated.jar"),
+                classLoader,
+                Collections.singletonList(new Relocation(parse("com{}google{}zxing"), parse(externalPath + "{}com{}google{}zxing"))));
+
         log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Loading dep " + ChatColor.WHITE + "JAI ImageIO Core");
         JarUtil.loadJar("http://central.maven.org/maven2/com/github/jai-imageio/jai-imageio-core/1.4.0/jai-imageio-core-1.4.0.jar",
                 new File(jarsFolder, "jai-imageio-core-1.4.0.jar"),
