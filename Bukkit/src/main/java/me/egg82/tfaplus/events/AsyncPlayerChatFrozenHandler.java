@@ -1,6 +1,7 @@
 package me.egg82.tfaplus.events;
 
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ShutdownSignalException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -128,6 +129,8 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
             InternalAPI.setLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
             return;
+        } catch (ShutdownSignalException ignored) {
+
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }

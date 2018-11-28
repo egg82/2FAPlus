@@ -272,7 +272,7 @@ public class SQLite {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES(?, ?, ?);", uuid.toString(), length, key);
+                sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES(?, ?, ?);", uuid.toString(), length, key.getEncoded());
             } catch (SQLException | ClassCastException ex) {
                 logger.error(ex.getMessage(), ex);
             }

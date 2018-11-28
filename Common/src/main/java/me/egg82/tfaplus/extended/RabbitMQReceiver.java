@@ -177,17 +177,23 @@ public class RabbitMQReceiver {
                 }
             };
             channel.basicConsume(deleteQueueName, true, deleteConsumer);
+        } catch (ShutdownSignalException ignored) {
+
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
     }
 
     public void close() throws IOException, TimeoutException {
-        if (channel != null) {
-            channel.close();
-        }
-        if (connection != null) {
-            connection.close();
-        }
+        try {
+            if (channel != null) {
+                channel.close();
+            }
+        } catch (AlreadyClosedException ignored) {}
+        try {
+            if (connection != null) {
+                connection.close();
+            }
+        } catch (AlreadyClosedException ignored) {}
     }
 }

@@ -10,5 +10,5 @@ public class ServiceKeys {
     public static final String GAMEANALYTICS_SECRET = "922cdf36dbd07eb0180fe9c882a6d69195bed9a6";
 
     public static final String HOTP_ALGORITM = HmacOneTimePasswordGenerator.HOTP_HMAC_ALGORITHM;
-    public static final String TOTP_ALGORITM = TimeBasedOneTimePasswordGenerator.TOTP_ALGORITHM_HMAC_SHA256;
+    public static final String TOTP_ALGORITM = TimeBasedOneTimePasswordGenerator.TOTP_ALGORITHM_HMAC_SHA1;
 }

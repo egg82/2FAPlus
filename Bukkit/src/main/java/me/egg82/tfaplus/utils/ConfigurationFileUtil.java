@@ -212,7 +212,7 @@ public class ConfigurationFileUtil {
         }
 
         ConfigurationLoader<ConfigurationNode> loader = YAMLConfigurationLoader.builder().setFlowStyle(DumperOptions.FlowStyle.BLOCK).setIndent(2).setFile(fileOnDisk).build();
-        ConfigurationNode root = loader.load(ConfigurationOptions.defaults().setHeader("Comments are gone because update :(. Click here for new config + comments: https://www.spigotmc.org/resources/altfinder.57678/"));
+        ConfigurationNode root = loader.load(ConfigurationOptions.defaults().setHeader("Comments are gone because update :(. Click here for new config + comments: https://www.spigotmc.org/resources/2faplus.62600/"));
         Configuration config = new Configuration(root);
         ConfigurationVersionUtil.conformVersion(loader, config, fileOnDisk);
 

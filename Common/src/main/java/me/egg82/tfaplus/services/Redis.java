@@ -267,15 +267,16 @@ public class Redis {
                     for (String ip : data) {
                         String ipKey = "2faplus:ip:" + ip;
                         String loginKey = "2faplus:login:" + uuid + "|" + ip;
-                        String authyKey = "2faplus:authy:" + uuid;
-                        String totpKey = "2faplus:totp:" + uuid;
                         redis.del(loginKey);
-                        redis.del(authyKey);
-                        redis.del(totpKey);
                         redis.srem(ipKey, uuid.toString());
                     }
                 }
                 redis.del(uuidKey);
+
+                String authyKey = "2faplus:authy:" + uuid;
+                String totpKey = "2faplus:totp:" + uuid;
+                redis.del(authyKey);
+                redis.del(totpKey);
 
                 redis.publish("2faplus-delete", uuid.toString());
 

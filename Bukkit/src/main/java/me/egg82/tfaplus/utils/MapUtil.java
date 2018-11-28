@@ -1,13 +1,14 @@
 package me.egg82.tfaplus.utils;
 
 import java.awt.image.BufferedImage;
+import java.util.Map;
 import me.egg82.tfaplus.renderers.ImageRenderer;
 import me.egg82.tfaplus.renderers.QRRenderer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapView;
 
 /**
@@ -18,6 +19,19 @@ import org.bukkit.map.MapView;
 public class MapUtil {
     private MapUtil() {}
 
+    private static final Material MAP;
+    static {
+        Material mapMaterial;
+
+        try {
+            mapMaterial = Material.valueOf("FILLED_MAP");
+        } catch (IllegalArgumentException ignored) {
+            mapMaterial = Material.valueOf("MAP");
+        }
+
+        MAP = mapMaterial;
+    }
+
     public static void sendTOTPQRCode(Player player, String key, String issuer, long codeLength) {
         if (player == null) {
             throw new IllegalArgumentException("player cannot be null.");
@@ -26,9 +40,27 @@ public class MapUtil {
         BufferedImage image = QRRenderer.getTOTPImage(player.getName(), getServerName(), key, issuer, codeLength);
         MapView view = getView(player, image);
 
-        ItemStack map = new ItemStack(Material.MAP, 1, (short) view.getId());
-        setName(map, "TOTP code - DESTROY AFTER USE");
-        player.getInventory().addItem(map);
+        ItemStack map;
+        if (BukkitVersionUtil.isAtLeast("1.13")) {
+            map = new ItemStack(MAP, 1);
+        } else {
+            map = new ItemStack(MAP, 1, (short) view.getId());
+        }
+        setData(map, "TOTP code - DESTROY AFTER USE", view);
+        ItemStack oldItem;
+        if (BukkitVersionUtil.isAtLeast("1.9")) {
+            oldItem = player.getInventory().getItemInMainHand();
+            player.getInventory().setItemInMainHand(map);
+        } else {
+            oldItem = player.getInventory().getItemInHand();
+            player.getInventory().setItemInHand(map);
+        }
+        if (oldItem != null && oldItem.getType() != Material.AIR) {
+            Map<Integer, ItemStack> dropped = player.getInventory().addItem(oldItem);
+            for (Map.Entry<Integer, ItemStack> kvp : dropped.entrySet()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), kvp.getValue());
+            }
+        }
     }
 
     public static void sendHOTPQRCode(Player player, String key, String issuer, long codeLength, long counter) {
@@ -39,9 +71,27 @@ public class MapUtil {
         BufferedImage image = QRRenderer.getHOTPImage(player.getName(), getServerName(), key, issuer, codeLength, counter);
         MapView view = getView(player, image);
 
-        ItemStack map = new ItemStack(Material.MAP, 1, (short) view.getId());
-        setName(map, "HOTP code - DESTROY AFTER USE");
-        player.getInventory().addItem(map);
+        ItemStack map;
+        if (BukkitVersionUtil.isAtLeast("1.13")) {
+            map = new ItemStack(MAP, 1);
+        } else {
+            map = new ItemStack(MAP, 1, (short) view.getId());
+        }
+        setData(map, "HOTP code - DESTROY AFTER USE", view);
+        ItemStack oldItem;
+        if (BukkitVersionUtil.isAtLeast("1.9")) {
+            oldItem = player.getInventory().getItemInMainHand();
+            player.getInventory().setItemInMainHand(map);
+        } else {
+            oldItem = player.getInventory().getItemInHand();
+            player.getInventory().setItemInHand(map);
+        }
+        if (oldItem != null && oldItem.getType() != Material.AIR) {
+            Map<Integer, ItemStack> dropped = player.getInventory().addItem(oldItem);
+            for (Map.Entry<Integer, ItemStack> kvp : dropped.entrySet()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), kvp.getValue());
+            }
+        }
     }
 
     private static MapView getView(Player player, BufferedImage image) {
@@ -60,8 +110,11 @@ public class MapUtil {
         return name;
     }
 
-    private static void setName(ItemStack stack, String name) {
-        ItemMeta meta = stack.hasItemMeta() ? stack.getItemMeta() : Bukkit.getItemFactory().getItemMeta(stack.getType());
+    private static void setData(ItemStack stack, String name, MapView view) {
+        MapMeta meta = (MapMeta) (stack.hasItemMeta() ? stack.getItemMeta() : Bukkit.getItemFactory().getItemMeta(stack.getType()));
+        if (BukkitVersionUtil.isAtLeast("1.13")) {
+            meta.setMapId(view.getId());
+        }
         meta.setDisplayName(name);
         stack.setItemMeta(meta);
     }

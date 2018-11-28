@@ -9,11 +9,16 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.rabbitmq.client.Connection;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.core.TOTPData;
@@ -25,6 +30,7 @@ import ninja.egg82.sql.SQL;
 import ninja.egg82.tuples.longs.LongObjectPair;
 import ninja.egg82.tuples.objects.ObjectObjectPair;
 import ninja.leaping.configurate.ConfigurationNode;
+import org.apache.commons.codec.binary.Base32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.JedisPool;
@@ -37,7 +43,7 @@ public class InternalAPI {
     private static Cache<UUID, LongObjectPair<SecretKey>> totpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static LoadingCache<UUID, Boolean> verificationCache = Caffeine.newBuilder().expireAfterWrite(3L, TimeUnit.MINUTES).build(k -> Boolean.FALSE);
 
-    private static final Base64.Encoder encoder = Base64.getEncoder();
+    private static final Base32 encoder = new Base32();
 
     public static void changeVerificationTime(long duration, TimeUnit unit) {
         verificationCache = Caffeine.newBuilder().expireAfterWrite(duration, unit).build(k -> Boolean.FALSE);

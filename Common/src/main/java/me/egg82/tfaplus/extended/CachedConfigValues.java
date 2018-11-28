@@ -3,7 +3,6 @@ package me.egg82.tfaplus.extended;
 import com.authy.AuthyApiClient;
 import com.google.common.collect.ImmutableSet;
 import com.rabbitmq.client.ConnectionFactory;
-import java.net.URI;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import me.egg82.tfaplus.core.FreezeConfigContainer;

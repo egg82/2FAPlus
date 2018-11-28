@@ -25,9 +25,8 @@ public class ImageRenderer extends MapRenderer {
 
     @Override
     public void render(MapView mapView, MapCanvas mapCanvas, Player player) {
-        if (image != null && player.getUniqueId().equals(playerUUID)) {
+        if (player.getUniqueId().equals(playerUUID)) {
             mapCanvas.drawImage(0, 0, image);
-            image = null;
         }
     }
 }

@@ -2,6 +2,7 @@ package me.egg82.tfaplus.services;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ShutdownSignalException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Base64;
@@ -52,6 +53,8 @@ public class RabbitMQ {
                 }
 
                 return Boolean.TRUE;
+            } catch (ShutdownSignalException ignored) {
+
             } catch (IOException | TimeoutException ex) {
                 logger.error(ex.getMessage(), ex);
             }
@@ -76,6 +79,8 @@ public class RabbitMQ {
                 channel.basicPublish("2faplus-authy", "", null, obj.toJSONString().getBytes(utf8));
 
                 return Boolean.TRUE;
+            } catch (ShutdownSignalException ignored) {
+
             } catch (IOException | TimeoutException ex) {
                 logger.error(ex.getMessage(), ex);
             }
@@ -101,6 +106,8 @@ public class RabbitMQ {
                 channel.basicPublish("2faplus-totp", "", null, obj.toJSONString().getBytes(utf8));
 
                 return Boolean.TRUE;
+            } catch (ShutdownSignalException ignored) {
+
             } catch (IOException | TimeoutException ex) {
                 logger.error(ex.getMessage(), ex);
             }
@@ -120,6 +127,8 @@ public class RabbitMQ {
                 channel.basicPublish("2faplus-delete", "", null, uuid.toString().getBytes(utf8));
 
                 return Boolean.TRUE;
+            } catch (ShutdownSignalException ignored) {
+
             } catch (IOException | TimeoutException ex) {
                 logger.error(ex.getMessage(), ex);
             }

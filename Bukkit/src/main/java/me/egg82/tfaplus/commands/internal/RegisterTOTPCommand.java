@@ -76,17 +76,19 @@ public class RegisterTOTPCommand implements Runnable {
 
                     sender.sendMessage(LogUtil.getHeading() + ChatColor.WHITE + playerName + ChatColor.GREEN + " has been successfully registered.");
                     if (player == null || !(sender instanceof Player) || player.getUniqueId() != ((Player) sender).getUniqueId()) {
-                        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Their 2FA account key is: " + ChatColor.WHITE + v);
+                        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Their 2FA account key is " + ChatColor.WHITE + v);
                         if (sender instanceof Player) {
                             sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You have been provided a scannable QR code for your convenience.");
                             MapUtil.sendTOTPQRCode((Player) sender, v, config.getNode("otp", "issuer").getString(""), config.getNode("otp", "digits").getLong());
                         }
+                        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please remember to keep this information PRIVATE!");
                     }
 
                     if (player != null) {
-                        player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Your 2FA account key is: " + ChatColor.WHITE + v);
+                        player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Your 2FA account key is " + ChatColor.WHITE + v);
                         player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You have been provided a scannable QR code for your convenience.");
                         MapUtil.sendTOTPQRCode(player, v, config.getNode("otp", "issuer").getString(""), config.getNode("otp", "digits").getLong());
+                        player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please remember to keep this key and QR code PRIVATE!");
                     }
                 })
                 .execute();

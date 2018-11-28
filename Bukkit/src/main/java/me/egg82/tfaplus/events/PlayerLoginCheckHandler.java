@@ -1,6 +1,7 @@
 package me.egg82.tfaplus.events;
 
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ShutdownSignalException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Optional;
@@ -68,7 +69,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
                 if (cachedConfig.getDebug()) {
                     logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is required. Kicking with defined message.");
                 }
-                kickPlayer(config, event.getPlayer());
+                kickPlayer(config, event);
             } else {
                 if (cachedConfig.getDebug()) {
                     logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is not required. Ignoring.");
@@ -102,6 +103,8 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
     private boolean canLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
             return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        } catch (ShutdownSignalException ignored) {
+
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
@@ -109,7 +112,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
         return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
     }
 
-    private void kickPlayer(Configuration config, Player player) {
+    private void kickPlayer(Configuration config, PlayerLoginEvent event) {
         Optional<PlaceholderAPIHook> placeholderapi;
         try {
             placeholderapi = ServiceLocator.getOptional(PlaceholderAPIHook.class);
@@ -118,10 +121,12 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
             placeholderapi = Optional.empty();
         }
 
+        event.setResult(PlayerLoginEvent.Result.KICK_OTHER);
+
         if (placeholderapi.isPresent()) {
-            player.kickPlayer(placeholderapi.get().withPlaceholders(player, config.getNode("2fa", "too-many-attempts-kick-message").getString("")));
+            event.setKickMessage(placeholderapi.get().withPlaceholders(event.getPlayer(), config.getNode("2fa", "no-auth-kick-message").getString("")));
         } else {
-            player.kickPlayer(config.getNode("2fa", "too-many-attempts-kick-message").getString(""));
+            event.setKickMessage(config.getNode("2fa", "no-auth-kick-message").getString(""));
         }
     }
 }

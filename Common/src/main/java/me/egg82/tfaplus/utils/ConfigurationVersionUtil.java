@@ -19,9 +19,9 @@ public class ConfigurationVersionUtil {
         if (config.getNode("version").getDouble(1.0d) == 1.0d) {
             to11(config);
         }
-        /*if (config.getNode("version").getDouble() == 2.0d) {
-            to30(config);
-        }*/
+        if (config.getNode("version").getDouble() == 1.1d) {
+            to12(config);
+        }
 
         if (config.getNode("version").getDouble() != oldVersion) {
             File backupFile = new File(fileOnDisk.getParent(), fileOnDisk.getName() + ".bak");
@@ -58,5 +58,14 @@ public class ConfigurationVersionUtil {
 
         // Version
         config.getNode("version").setValue(1.1d);
+    }
+
+    private static void to12(ConfigurationNode config) {
+        // Add otp
+        config.getNode("otp", "digits").setValue(6L);
+        config.getNode("otp", "issuer").setValue("2FAPlus");
+
+        // Version
+        config.getNode("version").setValue(1.2d);
     }
 }

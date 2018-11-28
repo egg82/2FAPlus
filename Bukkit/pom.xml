@@ -168,6 +168,7 @@
                                         <exclude>com/google/common/**</exclude>
                                         <exclude>javax/annotation/**</exclude>
                                         <exclude>junit/**</exclude>
+                                        <exclude>org/apache/commons/codec/**</exclude>
                                         <exclude>org/apache/commons/lang3/**</exclude>
                                         <exclude>org/intellij/**</exclude>
                                         <exclude>org/junit/**</exclude>
@@ -229,9 +230,20 @@
             <id>egg82-ninja</id>
             <url>https://www.myget.org/F/egg82-java/maven/</url>
         </repository>
+
+        <!--<repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>-->
     </repositories>
 
     <dependencies>
+        <!--<dependency>
+            <groupId>org.bukkit</groupId>
+            <artifactId>bukkit</artifactId>
+            <version>1.8-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>-->
         <dependency>
             <groupId>com.destroystokyo.paper</groupId>
             <artifactId>paper-api</artifactId>
@@ -239,6 +251,16 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>co.aikar</groupId>
+            <artifactId>fastutil-base</artifactId>
+            <version>3.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>co.aikar</groupId>
+            <artifactId>fastutil-intbase</artifactId>
+            <version>3.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>co.aikar</groupId>
             <artifactId>taskchain-bukkit</artifactId>
@@ -273,6 +295,11 @@
             <groupId>ninja.egg82</groupId>
             <artifactId>spigot-updater</artifactId>
             <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>ninja.egg82</groupId>
+            <artifactId>reflection-utils</artifactId>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>me.lucko</groupId>
