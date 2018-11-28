@@ -45,6 +45,8 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
             if (colon > -1) {
                 for (String command : cachedConfig.getCommands()) {
+                    command = command.trim() + " ";
+
                     if (split.startsWith(command)) {
                         if (!api.isRegistered(event.getPlayer().getUniqueId())) {
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
@@ -60,6 +62,8 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                 }
             } else {
                 for (String command : cachedConfig.getCommands()) {
+                    command = command.trim() + " ";
+
                     if (message.startsWith(command)) {
                         if (!api.isRegistered(event.getPlayer().getUniqueId())) {
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");

@@ -1,7 +1,7 @@
 name: 2FAPlus
 prefix: 2FA+
 main: me.egg82.tfaplus.BukkitBootstrap
-version: 1.1.5
+version: 1.2.6
 author: egg82
 api-version: 1.13
 description: Simple 2FA plugin for your Minecraft server.
