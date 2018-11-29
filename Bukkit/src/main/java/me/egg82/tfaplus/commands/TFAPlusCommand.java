@@ -6,7 +6,9 @@ import co.aikar.commands.annotation.*;
 import co.aikar.taskchain.TaskChainFactory;
 import me.egg82.tfaplus.TFAPlus;
 import me.egg82.tfaplus.commands.internal.*;
+import me.egg82.tfaplus.utils.LogUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
 
@@ -84,5 +86,6 @@ public class TFAPlusCommand extends BaseCommand {
     @Syntax("[command]")
     public void onHelp(CommandSender sender, CommandHelp help) {
         help.showHelp();
+        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Additional commands: " + ChatColor.WHITE + "/hotp");
     }
 }
