@@ -447,8 +447,6 @@ public class TFAPlus {
             return;
         }
 
-        cachedConfig.getSQL().close();
-
         if (cachedConfig.getRedisPool() != null) {
             cachedConfig.getRedisPool().close();
         }
@@ -468,6 +466,8 @@ public class TFAPlus {
                 Thread.currentThread().interrupt();
             }
         }
+
+        cachedConfig.getSQL().close();
     }
 
     private boolean isVanished(Player player) {
