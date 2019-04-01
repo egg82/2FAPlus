@@ -67,7 +67,7 @@ public class TFAPlus {
     private final Plugin plugin;
     private final boolean isBukkit;
 
-    public TFAPlus(Plugin plugin) {
+    public TFAPlus(Plugin plugin, ClassLoader proxiedClassLoader) {
         isBukkit = Bukkit.getName().equals("Bukkit") || Bukkit.getName().equals("CraftBukkit");
         this.plugin = plugin;
     }
@@ -291,28 +291,28 @@ public class TFAPlus {
     }
 
     private void loadEvents() {
-        events.add(BukkitEvents.subscribe(AsyncPlayerChatEvent.class, EventPriority.HIGHEST).handler(e -> new AsyncPlayerChatFrozenHandler(plugin).accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerCommandPreprocessEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerCommandPreprocessFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerInteractEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerInteractFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(EntityDamageByEntityEvent.class, EventPriority.HIGHEST).handler(e -> new EntityDamageByEntityFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(InventoryClickEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryClickFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(InventoryDragEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryDragFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(InventoryMoveItemEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryMoveItemFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerPickupItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupItemFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, AsyncPlayerChatEvent.class, EventPriority.HIGHEST).handler(e -> new AsyncPlayerChatFrozenHandler(plugin).accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerCommandPreprocessEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerCommandPreprocessFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerInteractEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerInteractFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, EntityDamageByEntityEvent.class, EventPriority.HIGHEST).handler(e -> new EntityDamageByEntityFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, InventoryClickEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryClickFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, InventoryDragEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryDragFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, InventoryMoveItemEvent.class, EventPriority.HIGHEST).handler(e -> new InventoryMoveItemFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerPickupItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupItemFrozenHandler().accept(e)));
         try {
             Class.forName("org.bukkit.event.player.PlayerPickupArrowEvent");
-            events.add(BukkitEvents.subscribe(PlayerPickupArrowEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupArrowFrozenHandler().accept(e)));
+            events.add(BukkitEvents.subscribe(plugin, PlayerPickupArrowEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerPickupArrowFrozenHandler().accept(e)));
         } catch (ClassNotFoundException ignored) {}
-        events.add(BukkitEvents.subscribe(PlayerDropItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerDropItemFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(BlockPlaceEvent.class, EventPriority.HIGHEST).handler(e -> new BlockPlaceFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(BlockBreakEvent.class, EventPriority.HIGHEST).handler(e -> new BlockBreakFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerMoveEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerMoveFrozenHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerTeleportEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerTeleportFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerDropItemEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerDropItemFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, BlockPlaceEvent.class, EventPriority.HIGHEST).handler(e -> new BlockPlaceFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, BlockBreakEvent.class, EventPriority.HIGHEST).handler(e -> new BlockBreakFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerMoveEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerMoveFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerTeleportEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerTeleportFrozenHandler().accept(e)));
 
-        events.add(BukkitEvents.subscribe(AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler(plugin).accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler(plugin).accept(e)));
-        events.add(BukkitEvents.subscribe(PlayerQuitEvent.class, EventPriority.LOW).handler(e -> new PlayerQuitFrozenHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler(plugin).accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler(plugin).accept(e)));
+        events.add(BukkitEvents.subscribe(plugin, PlayerQuitEvent.class, EventPriority.LOW).handler(e -> new PlayerQuitFrozenHandler().accept(e)));
     }
 
     private void loadHooks() {

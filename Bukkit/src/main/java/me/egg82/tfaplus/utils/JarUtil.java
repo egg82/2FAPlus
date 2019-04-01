@@ -33,19 +33,50 @@ public class JarUtil {
 
     private JarUtil() {}
 
-    public static void loadJar(String url, File input, URLClassLoader classLoader) throws IOException, IllegalAccessException, InvocationTargetException {
+    public static boolean hasJar(File output) {
+        if (output.exists()) {
+            return !output.isDirectory();
+        }
+        return false;
+    }
+
+    public static void loadJar(File input, URLClassLoader classLoader) throws IOException, IllegalAccessException, InvocationTargetException {
         if (input.exists() && input.isDirectory()) {
             Files.delete(input.toPath());
         }
-
         if (!input.exists()) {
-            downloadJar(url, input);
+            throw new IOException("input does not exist.");
         }
 
         ADD_URL_METHOD.invoke(classLoader, input.toPath().toUri().toURL());
     }
 
-    public static void loadJar(String url, File input, File output, URLClassLoader classLoader, List<Relocation> rules) throws IOException, IllegalAccessException, InvocationTargetException {
+    public static void loadJar(List<String> urls, File input, URLClassLoader classLoader) throws IOException, IllegalAccessException, InvocationTargetException {
+        if (input.exists() && input.isDirectory()) {
+            Files.delete(input.toPath());
+        }
+
+        if (!input.exists()) {
+            IOException lastEx = null;
+            boolean good = false;
+            for (String url : urls) {
+                try {
+                    downloadJar(url, input);
+                    good = true;
+                    break;
+                } catch (IOException ex) {
+                    lastEx = ex;
+                }
+            }
+            if (!good && lastEx != null) {
+                throw lastEx;
+            }
+        }
+
+        ADD_URL_METHOD.invoke(classLoader, input.toPath().toUri().toURL());
+    }
+
+    public static void loadJar(List<String> urls, File input, File output, URLClassLoader classLoader, List<Relocation> rules) throws IOException, IllegalAccessException, InvocationTargetException {
         if (input.exists() && input.isDirectory()) {
             Files.delete(input.toPath());
         }
@@ -54,7 +85,20 @@ public class JarUtil {
         }
 
         if (!input.exists()) {
-            downloadJar(url, input);
+            IOException lastEx = null;
+            boolean good = false;
+            for (String url : urls) {
+                try {
+                    downloadJar(url, input);
+                    good = true;
+                    break;
+                } catch (IOException ex) {
+                    lastEx = ex;
+                }
+            }
+            if (!good && lastEx != null) {
+                throw lastEx;
+            }
         }
 
         if (!output.exists()) {

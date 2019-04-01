@@ -5,7 +5,7 @@
     <parent>
         <artifactId>2fa-plus-parent</artifactId>
         <groupId>me.egg82</groupId>
-        <version>1.2.8</version>
+        <version>1.2.9</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -31,118 +31,9 @@
                 <version>3.1.1</version>
                 <configuration>
                     <relocations>
-                        <!-- dep-injected -->
-                        <relocation>
-                            <pattern>com.github.benmanes.caffeine</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.com.github.benmanes.caffeine</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.github.jaiimageio</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.com.github.jaiimageio</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.zaxxer.hikari</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.com.zaxxer.hikari</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>javassist</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.javassist</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.apache.commons.collections</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.org.apache.commons.collections</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.apache.commons.net</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.org.apache.commons.net</shadedPattern>
-                        </relocation>
                         <relocation>
                             <pattern>org.bstats</pattern>
                             <shadedPattern>me.egg82.tfaplus.external.org.bstats</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>redis.clients</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.redis.clients</shadedPattern>
-                        </relocation>
-
-                        <!-- regular relocations -->
-                        <relocation>
-                            <pattern>co.aikar.commands</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.co.aikar.commands</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>co.aikar.taskchain</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.co.aikar.taskchain</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.authy</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.com.authy</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.google</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.com.google</shadedPattern>
-                            <excludes>
-                                <exclude>com.google.common.**</exclude>
-                            </excludes>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.eatthepath</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.com.eatthepath</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.googlecode</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.com.googlecode</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>info.ronjenkins</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.info.ronjenkins</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>it.unimi</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.it.unimi</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>me.lucko</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.me.lucko</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>net.jodah</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.net.jodah</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>ninja.egg82</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.ninja.egg82</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>ninja.leaping</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.ninja.leaping</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.apache.commons</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.org.apache.commons</shadedPattern>
-                            <excludes>
-                                <exclude>org.apache.commons.codec.**</exclude>
-                                <exclude>org.apache.commons.io.**</exclude>
-                                <exclude>org.apache.commons.lang.**</exclude>
-                                <exclude>org.apache.commons.lang3.**</exclude>
-                                <exclude>org.apache.commons.pool2.**</exclude>
-                            </excludes>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.checkerframework</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.org.checkerframework</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.codehaus</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.org.codehaus</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.hamcrest</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.org.hamcrest</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.jetbrains</pattern>
-                            <shadedPattern>me.egg82.tfaplus.external.org.jetbrains</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>
@@ -274,7 +165,7 @@
         <dependency>
             <groupId>ninja.egg82</groupId>
             <artifactId>event-chain-bukkit</artifactId>
-            <version>1.0.6</version>
+            <version>1.0.9</version>
         </dependency>
         <dependency>
             <groupId>org.spongepowered</groupId>
