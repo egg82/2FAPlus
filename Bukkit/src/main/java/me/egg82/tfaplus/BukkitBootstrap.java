@@ -101,18 +101,18 @@ public class BukkitBootstrap extends JavaPlugin {
 
         JarUtil.loadJar(getFile(), classLoader);
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "caffeine-2.6.2.jar"))) {
+        if (!JarUtil.hasJar(new File(jarsFolder, "caffeine-2.7.0.jar"))) {
             log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Caffeine");
         }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/github/ben-manes/caffeine/caffeine/2.6.2/caffeine-2.6.2.jar", "http://central.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.6.2/caffeine-2.6.2.jar"),
-                new File(jarsFolder, "caffeine-2.6.2.jar"),
+        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/github/ben-manes/caffeine/caffeine/2.7.0/caffeine-2.7.0.jar", "http://central.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.7.0/caffeine-2.7.0.jar"),
+                new File(jarsFolder, "caffeine-2.7.0.jar"),
                 classLoader);
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "amqp-client-5.5.0.jar"))) {
+        if (!JarUtil.hasJar(new File(jarsFolder, "amqp-client-5.6.0.jar"))) {
             log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "RabbitMQ");
         }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/rabbitmq/amqp-client/5.5.0/amqp-client-5.5.0.jar", "http://central.maven.org/maven2/com/rabbitmq/amqp-client/5.5.0/amqp-client-5.5.0.jar"),
-                new File(jarsFolder, "amqp-client-5.5.0.jar"),
+        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/rabbitmq/amqp-client/5.6.0/amqp-client-5.6.0.jar", "http://central.maven.org/maven2/com/rabbitmq/amqp-client/5.6.0/amqp-client-5.6.0.jar"),
+                new File(jarsFolder, "amqp-client-5.6.0.jar"),
                 classLoader);
 
         if (!JarUtil.hasJar(new File(jarsFolder, "HikariCP-3.2.0.jar"))) {
@@ -122,11 +122,11 @@ public class BukkitBootstrap extends JavaPlugin {
                 new File(jarsFolder, "HikariCP-3.2.0.jar"),
                 classLoader);
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "jedis-2.9.0.jar"))) {
+        if (!JarUtil.hasJar(new File(jarsFolder, "jedis-2.9.3.jar"))) {
             log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Redis");
         }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/redis/clients/jedis/2.9.0/jedis-2.9.0.jar", "http://central.maven.org/maven2/redis/clients/jedis/2.9.0/jedis-2.9.0.jar"),
-                new File(jarsFolder, "jedis-2.9.0.jar"),
+        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/redis/clients/jedis/2.9.3/jedis-2.9.3.jar", "http://central.maven.org/maven2/redis/clients/jedis/2.9.3/jedis-2.9.3.jar"),
+                new File(jarsFolder, "jedis-2.9.3.jar"),
                 classLoader);
 
         if (!JarUtil.hasJar(new File(jarsFolder, "javassist-3.23.1-GA.jar"))) {
