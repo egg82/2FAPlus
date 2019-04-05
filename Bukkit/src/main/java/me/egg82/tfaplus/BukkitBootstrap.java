@@ -11,10 +11,11 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.logging.Level;
 import me.egg82.tfaplus.services.GameAnalyticsErrorHandler;
-import me.egg82.tfaplus.services.ProxiedURLClassLoader;
-import me.egg82.tfaplus.utils.JarUtil;
 import me.egg82.tfaplus.utils.LogUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
+import ninja.egg82.core.JarDep;
+import ninja.egg82.services.ProxiedURLClassLoader;
+import ninja.egg82.utils.JarUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
@@ -92,112 +93,99 @@ public class BukkitBootstrap extends JavaPlugin {
             }
         }
 
-        JarUtil.loadJar(getFile(), classLoader);
+        JarUtil.loadRawJarFile(getFile(), classLoader);
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "caffeine-2.7.0.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Caffeine");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/github/ben-manes/caffeine/caffeine/2.7.0/caffeine-2.7.0.jar", "http://central.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.7.0/caffeine-2.7.0.jar"),
-                new File(jarsFolder, "caffeine-2.7.0.jar"),
-                classLoader);
+        JarDep caffeine = JarDep.builder("caffeine", "2.7.0")
+                .addURL("https://nexus.egg82.me/repository/maven-central/com/github/ben-manes/caffeine/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/com/github/ben-manes/caffeine/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(caffeine, jarsFolder, classLoader, "Caffeine");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "amqp-client-5.6.0.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "RabbitMQ");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/rabbitmq/amqp-client/5.6.0/amqp-client-5.6.0.jar", "http://central.maven.org/maven2/com/rabbitmq/amqp-client/5.6.0/amqp-client-5.6.0.jar"),
-                new File(jarsFolder, "amqp-client-5.6.0.jar"),
-                classLoader);
+        JarDep rabbitmq = JarDep.builder("amqp-client", "5.6.0")
+                .addURL("https://nexus.egg82.me/repository/maven-central/com/rabbitmq/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/com/rabbitmq/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(rabbitmq, jarsFolder, classLoader, "RabbitMQ");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "HikariCP-3.2.0.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "HikariCP");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/zaxxer/HikariCP/3.2.0/HikariCP-3.2.0.jar", "http://central.maven.org/maven2/com/zaxxer/HikariCP/3.2.0/HikariCP-3.2.0.jar"),
-                new File(jarsFolder, "HikariCP-3.2.0.jar"),
-                classLoader);
+        JarDep hikari = JarDep.builder("HikariCP", "3.2.0")
+                .addURL("https://nexus.egg82.me/repository/maven-central/com/zaxxer/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/com/zaxxer/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(hikari, jarsFolder, classLoader, "HikariCP");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "jedis-2.9.3.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Redis");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/redis/clients/jedis/2.9.3/jedis-2.9.3.jar", "http://central.maven.org/maven2/redis/clients/jedis/2.9.3/jedis-2.9.3.jar"),
-                new File(jarsFolder, "jedis-2.9.3.jar"),
-                classLoader);
+        JarDep jedis = JarDep.builder("jedis", "2.9.3")
+                .addURL("https://nexus.egg82.me/repository/maven-central/redis/clients/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/redis/clients/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(jedis, jarsFolder, classLoader, "Jedis");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "javassist-3.23.1-GA.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Javassist");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/org/javassist/javassist/3.23.1-GA/javassist-3.23.1-GA.jar", "http://central.maven.org/maven2/org/javassist/javassist/3.23.1-GA/javassist-3.23.1-GA.jar"),
-                new File(jarsFolder, "javassist-3.23.1-GA.jar"),
-                classLoader);
+        JarDep javassist = JarDep.builder("javassist", "3.23.1-GA")
+                .addURL("https://nexus.egg82.me/repository/maven-central/org/javassist/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/org/javassist/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(javassist, jarsFolder, classLoader, "Javassist");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "commons-collections-3.2.2.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Apache Collections");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/commons-collections/commons-collections/3.2.2/commons-collections-3.2.2.jar", "http://central.maven.org/maven2/commons-collections/commons-collections/3.2.2/commons-collections-3.2.2.jar"),
-                new File(jarsFolder, "commons-collections-3.2.2.jar"),
-                classLoader);
+        JarDep commonsCollections = JarDep.builder("commons-collections", "3.2.2")
+                .addURL("https://nexus.egg82.me/repository/maven-central/commons-collections/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/commons-collections/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(commonsCollections, jarsFolder, classLoader, "Apache Commons-Collections");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "commons-net-3.6.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Apache Net Utils");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/commons-net/commons-net/3.6/commons-net-3.6.jar", "http://central.maven.org/maven2/commons-net/commons-net/3.6/commons-net-3.6.jar"),
-                new File(jarsFolder, "commons-net-3.6.jar"),
-                classLoader);
+        JarDep commonsNet = JarDep.builder("commons-net", "3.6")
+                .addURL("https://nexus.egg82.me/repository/maven-central/commons-net/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/commons-net/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(commonsNet, jarsFolder, classLoader, "Apache Commons-Net");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "zxing-core-3.3.3.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "ZXing Core");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/google/zxing/core/3.3.3/core-3.3.3.jar", "http://central.maven.org/maven2/com/google/zxing/core/3.3.3/core-3.3.3.jar"),
-                new File(jarsFolder, "zxing-core-3.3.3.jar"),
-                classLoader);
+        JarDep zxingCore = JarDep.builder("zxing-core", "3.3.3")
+                .addURL("https://nexus.egg82.me/repository/maven-central/com/google/zxing/core/{VERSION}/core-{VERSION}.jar") // WARNING: Special case
+                .addURL("http://central.maven.org/maven2/com/google/zxing/core/{VERSION}/core-{VERSION}.jar") // WARNING: Special case
+                .build();
+        loadJar(zxingCore, jarsFolder, classLoader, "ZXing Core");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "jai-imageio-core-1.4.0.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "JAI ImageIO Core");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/com/github/jai-imageio/jai-imageio-core/1.4.0/jai-imageio-core-1.4.0.jar", "http://central.maven.org/maven2/com/github/jai-imageio/jai-imageio-core/1.4.0/jai-imageio-core-1.4.0.jar"),
-                new File(jarsFolder, "jai-imageio-core-1.4.0.jar"),
-                classLoader);
+        JarDep imageioCore = JarDep.builder("jai-imageio-core", "1.4.0")
+                .addURL("https://nexus.egg82.me/repository/maven-central/com/github/jai-imageio/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/com/github/jai-imageio/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(imageioCore, jarsFolder, classLoader, "JAI ImageIO Core");
 
         // 0.9.10 for 1.11 compatibility
-        if (!JarUtil.hasJar(new File(jarsFolder, "reflections-0.9.10.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "Reflections");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/org/reflections/reflections/0.9.10/reflections-0.9.10.jar", "http://central.maven.org/maven2/org/reflections/reflections/0.9.10/reflections-0.9.10.jar"),
-                new File(jarsFolder, "reflections-0.9.10.jar"),
-                classLoader);
+        JarDep reflections = JarDep.builder("reflections", "0.9.10")
+                .addURL("https://nexus.egg82.me/repository/maven-central/org/reflections/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/org/reflections/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(reflections, jarsFolder, classLoader, "Reflections");
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "sqlite-jdbc-3.25.2.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "SQLite");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/org/xerial/sqlite-jdbc/3.25.2/sqlite-jdbc-3.25.2.jar", "http://central.maven.org/maven2/org/xerial/sqlite-jdbc/3.25.2/sqlite-jdbc-3.25.2.jar"),
-                new File(jarsFolder, "sqlite-jdbc-3.25.2.jar"),
-                classLoader);
+        JarDep sqlite = JarDep.builder("sqlite-jdbc", "3.25.2")
+                .addURL("https://nexus.egg82.me/repository/maven-central/org/xerial/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/org/xerial/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(sqlite, jarsFolder, classLoader, "SQLite");
 
         try {
-            DriverManager.getDriver("org.sqlite.JDBC");
-        } catch (SQLException ignored) {
-            try {
-                DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, classLoader).newInstance());
-            } catch (ClassNotFoundException | InstantiationException | SQLException ex) {
-                logger.error(ex.getMessage(), ex);
-            }
+            DriverManager.registerDriver((Driver) Class.forName("org.sqlite.JDBC", true, classLoader).newInstance());
+        } catch (ClassNotFoundException | InstantiationException | SQLException ex) {
+            logger.error(ex.getMessage(), ex);
         }
 
-        if (!JarUtil.hasJar(new File(jarsFolder, "mysql-connector-java-8.0.13.jar"))) {
-            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + "MySQL");
-        }
-        JarUtil.loadJar(Arrays.asList("https://nexus.egg82.me/repository/maven-central/mysql/mysql-connector-java/8.0.13/mysql-connector-java-8.0.13.jar", "http://central.maven.org/maven2/mysql/mysql-connector-java/8.0.13/mysql-connector-java-8.0.13.jar"),
-                new File(jarsFolder, "mysql-connector-java-8.0.13.jar"),
-                classLoader);
+        JarDep mysql = JarDep.builder("mysql-connector-java", "8.0.13")
+                .addURL("https://nexus.egg82.me/repository/maven-central/mysql/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/mysql/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(mysql, jarsFolder, classLoader, "MySQL");
 
         try {
-            DriverManager.getDriver("com.mysql.jdbc.Driver");
-        } catch (SQLException ignored) {
-            try {
-                DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, classLoader).newInstance());
-            } catch (ClassNotFoundException | InstantiationException | SQLException ex) {
-                logger.error(ex.getMessage(), ex);
-            }
+            DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver", true, classLoader).newInstance());
+        } catch (ClassNotFoundException | InstantiationException | SQLException ex) {
+            logger.error(ex.getMessage(), ex);
         }
+    }
+
+    private void loadJar(JarDep dep, File jarsFolder, URLClassLoader classLoader, String friendlyName) throws IOException, IllegalAccessException, InvocationTargetException {
+        if (!JarUtil.hasJar(dep, jarsFolder)) {
+            log(Level.INFO, LogUtil.getHeading() + ChatColor.YELLOW + "Downloading " + ChatColor.WHITE + friendlyName);
+        }
+        JarUtil.loadJar(dep, classLoader, jarsFolder);
     }
 
     private void log(Level level, String message) {
