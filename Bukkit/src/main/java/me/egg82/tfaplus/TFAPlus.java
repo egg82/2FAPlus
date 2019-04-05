@@ -24,11 +24,13 @@ import me.egg82.tfaplus.extended.RedisSubscriber;
 import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
 import me.egg82.tfaplus.hooks.PlayerAnalyticsHook;
 import me.egg82.tfaplus.hooks.PluginHook;
+import me.egg82.tfaplus.services.GameAnalyticsErrorHandler;
 import me.egg82.tfaplus.services.Redis;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.ConfigurationFileUtil;
 import me.egg82.tfaplus.utils.LogUtil;
+import me.egg82.tfaplus.utils.ServerIDUtil;
 import ninja.egg82.events.BukkitEventSubscriber;
 import ninja.egg82.events.BukkitEvents;
 import ninja.egg82.service.ServiceLocator;
@@ -89,6 +91,8 @@ public class TFAPlus {
     }
 
     public void onEnable() {
+        GameAnalyticsErrorHandler.open(ServerIDUtil.getID(), plugin.getDescription().getVersion(), Bukkit.getVersion());
+
         taskFactory = BukkitTaskChainFactory.create(plugin);
         commandManager = new PaperCommandManager(plugin);
         commandManager.enableUnstableAPI("help");
@@ -124,6 +128,8 @@ public class TFAPlus {
         unloadServices();
 
         plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Disabled");
+
+        GameAnalyticsErrorHandler.close();
     }
 
     private void loadServices() {

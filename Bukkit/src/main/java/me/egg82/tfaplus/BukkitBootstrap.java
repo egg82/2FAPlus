@@ -7,12 +7,8 @@ import java.nio.file.Files;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.UUID;
 import java.util.logging.Level;
-import me.egg82.tfaplus.services.GameAnalyticsErrorHandler;
 import me.egg82.tfaplus.utils.LogUtil;
-import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.JarDep;
 import ninja.egg82.services.ProxiedURLClassLoader;
 import ninja.egg82.utils.JarUtil;
@@ -61,8 +57,6 @@ public class BukkitBootstrap extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        GameAnalyticsErrorHandler.open(getID(), getDescription().getVersion(), Bukkit.getVersion());
-
         try {
             concreteClass.getMethod("onEnable").invoke(concrete);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
@@ -79,8 +73,6 @@ public class BukkitBootstrap extends JavaPlugin {
             logger.error(ex.getMessage(), ex);
             throw new RuntimeException("Could not invoke onDisable.");
         }
-
-        GameAnalyticsErrorHandler.close();
     }
 
     private void loadJars(File jarsFolder, URLClassLoader classLoader) throws IOException, IllegalAccessException, InvocationTargetException {
@@ -94,6 +86,66 @@ public class BukkitBootstrap extends JavaPlugin {
         }
 
         JarUtil.loadRawJarFile(getFile(), classLoader);
+
+        JarDep acfCore = JarDep.builder("acf-core", "0.5.0")
+                .addURL("https://nexus.egg82.me/repository/aikar/co/aikar/{NAME}/{VERSION}-SNAPSHOT/{NAME}-{VERSION}-20190401.213847-143-shaded.jar")
+                .addURL("https://repo.aikar.co/nexus/content/groups/aikar/co/aikar/{NAME}/{VERSION}-SNAPSHOT/{NAME}-{VERSION}-20190401.213847-143-shaded.jar")
+                .build();
+        loadJar(acfCore, jarsFolder, classLoader, "ACF Core");
+
+        JarDep acfPaper = JarDep.builder("acf-paper", "0.5.0")
+                .addURL("https://nexus.egg82.me/repository/aikar/co/aikar/{NAME}/{VERSION}-SNAPSHOT/{NAME}-{VERSION}-20190401.213856-143-shaded.jar")
+                .addURL("https://repo.aikar.co/nexus/content/groups/aikar/co/aikar/{NAME}/{VERSION}-SNAPSHOT/{NAME}-{VERSION}-20190401.213856-143-shaded.jar")
+                .build();
+        loadJar(acfPaper, jarsFolder, classLoader, "ACF Paper");
+
+        JarDep taskchainCore = JarDep.builder("taskchain-core", "3.7.2")
+                .addURL("https://nexus.egg82.me/repository/aikar/co/aikar/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("https://repo.aikar.co/nexus/content/groups/aikar/co/aikar/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(taskchainCore, jarsFolder, classLoader, "Taskchain Core");
+
+        JarDep taskchainBukkit = JarDep.builder("taskchain-bukkit", "3.7.2")
+                .addURL("https://nexus.egg82.me/repository/aikar/co/aikar/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("https://repo.aikar.co/nexus/content/groups/aikar/co/aikar/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(taskchainBukkit, jarsFolder, classLoader, "Taskchain Bukkit");
+
+        JarDep eventchainBukkit = JarDep.builder("event-chain-bukkit", "1.0.9")
+                .addURL("https://nexus.egg82.me/repository/egg82/ninja.egg82/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("https://www.myget.org/F/egg82-java/maven/ninja.egg82/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(eventchainBukkit, jarsFolder, classLoader, "Event Chain Bukkit");
+
+        JarDep spigotUpdater = JarDep.builder("spigot-updater", "1.0.1")
+                .addURL("https://nexus.egg82.me/repository/egg82/ninja.egg82/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("https://www.myget.org/F/egg82-java/maven/ninja.egg82/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(spigotUpdater, jarsFolder, classLoader, "Spigot Updater");
+
+        JarDep reflectionUtils = JarDep.builder("reflection-utils", "1.0.2")
+                .addURL("https://nexus.egg82.me/repository/egg82/ninja.egg82/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("https://www.myget.org/F/egg82-java/maven/ninja.egg82/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(reflectionUtils, jarsFolder, classLoader, "Reflection Utils");
+
+        JarDep configurateYAML = JarDep.builder("configurate-yaml", "3.6")
+                .addURL("https://nexus.egg82.me/repository/sponge/org/spongepowered/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("https://repo.spongepowered.org/maven/org/spongepowered/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(configurateYAML, jarsFolder, classLoader, "Configurate YAML");
+
+        JarDep beanutils = JarDep.builder("commons-beanutils-core", "1.8.3")
+                .addURL("https://nexus.egg82.me/repository/maven-central/commons-beanutils/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/commons-beanutils/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(beanutils, jarsFolder, classLoader, "Apache Commons-Beanutils");
+
+        JarDep validator = JarDep.builder("commons-validator", "1.6")
+                .addURL("https://nexus.egg82.me/repository/maven-central/commons-validator/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .addURL("http://central.maven.org/maven2/commons-validator/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
+                .build();
+        loadJar(validator, jarsFolder, classLoader, "Apache Commons-Validator");
 
         JarDep caffeine = JarDep.builder("caffeine", "2.7.0")
                 .addURL("https://nexus.egg82.me/repository/maven-central/com/github/ben-manes/caffeine/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
@@ -143,6 +195,12 @@ public class BukkitBootstrap extends JavaPlugin {
                 .build();
         loadJar(zxingCore, jarsFolder, classLoader, "ZXing Core");
 
+        JarDep zxingJavase = JarDep.builder("zxing-javase", "3.3.3")
+                .addURL("https://nexus.egg82.me/repository/maven-central/com/google/zxing/javase/{VERSION}/javase-{VERSION}.jar") // WARNING: Special case
+                .addURL("http://central.maven.org/maven2/com/google/zxing/javase/{VERSION}/javase-{VERSION}.jar") // WARNING: Special case
+                .build();
+        loadJar(zxingJavase, jarsFolder, classLoader, "ZXing JavaSE");
+
         JarDep imageioCore = JarDep.builder("jai-imageio-core", "1.4.0")
                 .addURL("https://nexus.egg82.me/repository/maven-central/com/github/jai-imageio/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
                 .addURL("http://central.maven.org/maven2/com/github/jai-imageio/{NAME}/{VERSION}/{NAME}-{VERSION}.jar")
@@ -190,51 +248,5 @@ public class BukkitBootstrap extends JavaPlugin {
 
     private void log(Level level, String message) {
         getServer().getLogger().log(level, (isBukkit) ? ChatColor.stripColor(message) : message);
-    }
-
-    private UUID getID() {
-        String id = Bukkit.getServerId().trim();
-        if (id.isEmpty() || id.equalsIgnoreCase("unnamed") || id.equalsIgnoreCase("unknown") || id.equalsIgnoreCase("default") || !ValidationUtil.isValidUuid(id)) {
-            id = UUID.randomUUID().toString();
-            try {
-                writeID(id);
-            } catch (IOException ex) {
-                logger.error(ex.getMessage(), ex);
-            }
-        }
-        return UUID.fromString(id);
-    }
-
-    private void writeID(String id) throws IOException {
-        File properties = new File(Bukkit.getWorldContainer(), "server.properties");
-        if (properties.exists() && properties.isDirectory()) {
-            Files.delete(properties.toPath());
-        }
-        if (!properties.exists()) {
-            if (!properties.createNewFile()) {
-                throw new IOException("Stats file could not be created.");
-            }
-        }
-
-        boolean written = false;
-        StringBuilder builder = new StringBuilder();
-        try (FileReader reader = new FileReader(properties); BufferedReader in = new BufferedReader(reader)) {
-            String line;
-            while ((line = in.readLine()) != null) {
-                if (line.trim().startsWith("server-id=")) {
-                    written = true;
-                    builder.append("server-id=" + id).append(System.lineSeparator());
-                } else {
-                    builder.append(line).append(System.lineSeparator());
-                }
-            }
-        }
-        if (!written) {
-            builder.append("server-id=" + id).append(System.lineSeparator());
-        }
-
-        try (FileWriter out = new FileWriter(properties)) {
-            out.write(builder.toString());
-        }
     }
 }
