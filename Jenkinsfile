@@ -17,4 +17,9 @@ pipeline {
             }
         }
     }
+	post {
+        always {
+            archiveArtifacts artifacts: '**/target/2faplus-*.jar', fingerprint: true
+        }
+    }
 }
