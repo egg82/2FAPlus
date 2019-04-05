@@ -49,13 +49,6 @@ public class BukkitBootstrap extends JavaPlugin {
         }
 
         try {
-            proxiedClassLoader.loadClass("com.zaxxer.hikari.HikariConfig");
-        } catch (ClassNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            throw new RuntimeException("Could not load Hikari.");
-        }
-
-        try {
             concreteClass = proxiedClassLoader.loadClass("me.egg82.tfaplus.TFAPlus");
             concrete = concreteClass.getDeclaredConstructor(Plugin.class, ClassLoader.class).newInstance(this, proxiedClassLoader);
             concreteClass.getMethod("onLoad").invoke(concrete);
