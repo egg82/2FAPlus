@@ -175,12 +175,12 @@
         <dependency>
             <groupId>ninja.egg82</groupId>
             <artifactId>spigot-updater</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>ninja.egg82</groupId>
             <artifactId>reflection-utils</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
         <dependency>
             <groupId>ninja.egg82</groupId>
