@@ -65,7 +65,7 @@ public class RedisSubscriber {
                     CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                     Configuration config = ServiceLocator.get(Configuration.class);
 
-                    InternalAPI.add(new LoginData(uuid, ip, created), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    InternalAPI.add(new LoginData(uuid, ip, created));
                 } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
@@ -84,7 +84,7 @@ public class RedisSubscriber {
                     CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                     Configuration config = ServiceLocator.get(Configuration.class);
 
-                    InternalAPI.add(new AuthyData(uuid, i), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    InternalAPI.add(new AuthyData(uuid, i));
                 } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
@@ -104,7 +104,7 @@ public class RedisSubscriber {
                     CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                     Configuration config = ServiceLocator.get(Configuration.class);
 
-                    InternalAPI.add(new TOTPData(uuid, length, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    InternalAPI.add(new TOTPData(uuid, length, key));
                 } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
@@ -125,7 +125,7 @@ public class RedisSubscriber {
                     CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                     Configuration config = ServiceLocator.get(Configuration.class);
 
-                    InternalAPI.add(new HOTPData(uuid, length, counter, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    InternalAPI.add(new HOTPData(uuid, length, counter, key));
                 } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
@@ -142,7 +142,7 @@ public class RedisSubscriber {
                 }
 
                 // In this case, the message is the "UUID"
-                InternalAPI.delete(message, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                InternalAPI.delete(message);
             }
         }
     }

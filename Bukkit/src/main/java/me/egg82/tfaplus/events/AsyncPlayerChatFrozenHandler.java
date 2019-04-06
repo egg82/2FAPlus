@@ -157,13 +157,13 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
     private void setLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            InternalAPI.setLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            InternalAPI.setLogin(uuid, ip, cachedConfig.getIPTime());
             return;
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
 
-        InternalAPI.setLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        InternalAPI.setLogin(uuid, ip, cachedConfig.getIPTime());
     }
 
     private void kickPlayer(Configuration config, Player player) {

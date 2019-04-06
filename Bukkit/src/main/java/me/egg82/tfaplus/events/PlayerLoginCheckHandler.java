@@ -100,12 +100,12 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
 
     private boolean canLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime());
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
 
-        return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime());
     }
 
     private void kickPlayer(Configuration config, PlayerLoginEvent event) {
