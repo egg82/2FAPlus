@@ -159,7 +159,7 @@ public class InternalAPI {
         try {
             RabbitMQ.broadcast(result, getRabbitConnection());
         } catch (IOException | TimeoutException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
         totpCache.put(uuid, new TOTPCacheData(codeLength, key));
@@ -215,7 +215,7 @@ public class InternalAPI {
         try {
             RabbitMQ.broadcast(result, getRabbitConnection());
         } catch (IOException | TimeoutException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
         authyCache.put(uuid, result.getID());
@@ -291,7 +291,7 @@ public class InternalAPI {
         try {
             RabbitMQ.delete(uuid, getRabbitConnection());
         } catch (IOException | TimeoutException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -570,7 +570,7 @@ public class InternalAPI {
         try {
             RabbitMQ.broadcast(result, getRabbitConnection());
         } catch (IOException | TimeoutException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -755,7 +755,7 @@ public class InternalAPI {
         return -1L;
     }
 
-    public static void setLogin(UUID uuid, String ip, long ipTime) {
+    public static void setLogin(UUID uuid, String ip) {
         if (ConfigUtil.isDebugging()) {
             logger.info("Setting login for " + uuid + " (" + ip + ")");
         }
@@ -780,13 +780,13 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ipTime, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.update(result, ConfigUtil.getIPTime(), ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
 
         // RabbitMQ
         try {
-            RabbitMQ.broadcast(result, ipTime, getRabbitConnection());
+            RabbitMQ.broadcast(result, ConfigUtil.getIPTime(), getRabbitConnection());
         } catch (IOException | TimeoutException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
         loginCache.put(new ObjectObjectPair<>(uuid, ip), Boolean.TRUE);
