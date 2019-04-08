@@ -1,11 +1,5 @@
 package me.egg82.tfaplus.services;
 
-import java.util.Base64;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import javax.crypto.spec.SecretKeySpec;
-
 import me.egg82.tfaplus.core.*;
 import me.egg82.tfaplus.extended.ServiceKeys;
 import me.egg82.tfaplus.utils.RedisUtil;
@@ -19,6 +13,12 @@ import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.exceptions.JedisException;
+
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class Redis {
     private static final Logger logger = LoggerFactory.getLogger(Redis.class);

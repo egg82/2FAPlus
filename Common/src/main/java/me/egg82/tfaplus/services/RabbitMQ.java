@@ -2,12 +2,6 @@ package me.egg82.tfaplus.services;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.Base64;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
@@ -16,6 +10,13 @@ import me.egg82.tfaplus.utils.RabbitMQUtil;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.Base64;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 
 public class RabbitMQ {
     private static final Logger logger = LoggerFactory.getLogger(RabbitMQ.class);

@@ -1,10 +1,6 @@
 package me.egg82.tfaplus.extended;
 
 import com.rabbitmq.client.*;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
@@ -20,6 +16,11 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Base64;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 public class RabbitMQReceiver {
     private final Logger logger = LoggerFactory.getLogger(getClass());

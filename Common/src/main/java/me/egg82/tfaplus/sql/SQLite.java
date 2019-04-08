@@ -1,11 +1,5 @@
 package me.egg82.tfaplus.sql;
 
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import javax.crypto.SecretKey;
-
 import me.egg82.tfaplus.core.*;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
@@ -13,6 +7,14 @@ import ninja.egg82.sql.SQL;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.crypto.SecretKey;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class SQLite {
     private static final Logger logger = LoggerFactory.getLogger(SQLite.class);

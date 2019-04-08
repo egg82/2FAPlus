@@ -1,7 +1,5 @@
 package me.egg82.tfaplus.extended;
 
-import java.util.Base64;
-import java.util.UUID;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
@@ -22,6 +20,9 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.exceptions.JedisException;
+
+import java.util.Base64;
+import java.util.UUID;
 
 public class RedisSubscriber {
     private final Logger logger = LoggerFactory.getLogger(getClass());

@@ -1,12 +1,6 @@
 package me.egg82.tfaplus.events;
 
 import com.rabbitmq.client.Connection;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
@@ -23,6 +17,13 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());

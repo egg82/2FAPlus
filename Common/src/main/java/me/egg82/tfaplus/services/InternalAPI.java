@@ -1,23 +1,15 @@
 package me.egg82.tfaplus.services;
 
 import com.authy.AuthyException;
-import com.authy.api.*;
+import com.authy.api.Hash;
+import com.authy.api.Token;
+import com.authy.api.User;
+import com.authy.api.Users;
 import com.eatthepath.otp.HmacOneTimePasswordGenerator;
 import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-
-import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-
 import com.rabbitmq.client.Connection;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -32,6 +24,16 @@ import ninja.egg82.tuples.objects.ObjectObjectPair;
 import org.apache.commons.codec.binary.Base32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class InternalAPI {
     private static final Logger logger = LoggerFactory.getLogger(InternalAPI.class);

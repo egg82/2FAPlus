@@ -2,14 +2,6 @@ package me.egg82.tfaplus.services.lookup;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import ninja.egg82.json.JSONUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -18,6 +10,15 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class BukkitPlayerInfo implements PlayerInfo {
     private static final Logger logger = LoggerFactory.getLogger(BukkitPlayerInfo.class);

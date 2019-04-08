@@ -1,7 +1,5 @@
 package me.egg82.tfaplus.events;
 
-import java.util.concurrent.ExecutionException;
-import java.util.function.Consumer;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.utils.LogUtil;
 import ninja.egg82.service.ServiceLocator;
@@ -13,6 +11,9 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 public class PlayerLoginUpdateNotifyHandler implements Consumer<PlayerLoginEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());

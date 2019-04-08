@@ -1,11 +1,12 @@
 package me.egg82.tfaplus.renderers;
 
-import java.awt.image.BufferedImage;
-import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
+
+import java.awt.image.BufferedImage;
+import java.util.UUID;
 
 /**
  * Largely taken from SecureMyAccount
