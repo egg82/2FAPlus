@@ -105,7 +105,7 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.update(result);
 
         // RabbitMQ
         broadcastResult(result);
@@ -153,7 +153,7 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.update(result);
 
         // RabbitMQ
         try {
@@ -209,7 +209,7 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.update(result);
 
         // RabbitMQ
         try {
@@ -279,7 +279,7 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.delete(uuid, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.delete(uuid);
 
         // RabbitMQ
         rabbitDelete(uuid);
@@ -462,7 +462,7 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.update(result);
 
         // Rabbit
         broadcastResult(result);
@@ -555,7 +555,7 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.update(result);
 
         // Rabbit
         broadcastResult(result);
@@ -615,7 +615,7 @@ public class InternalAPI {
 
         // Redis
         try {
-            TOTPCacheData result = Redis.getTOTP(uuid, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+            TOTPCacheData result = Redis.getTOTP(uuid).get();
             if (result != null) {
                 if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in Redis. Value: " + result);
@@ -643,7 +643,7 @@ public class InternalAPI {
                     logger.info(uuid + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+                Redis.update(result).get();
                 RabbitMQ.broadcast(result, getRabbitConnection()).get();
                 return new TOTPCacheData(result.getLength(), result.getKey());
             }
@@ -664,7 +664,7 @@ public class InternalAPI {
 
         // Redis
         try {
-            HOTPCacheData result = Redis.getHOTP(uuid, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+            HOTPCacheData result = Redis.getHOTP(uuid).get();
             if (result != null) {
                 if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in Redis. Value: " + result);
@@ -692,7 +692,7 @@ public class InternalAPI {
                     logger.info(uuid + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+                Redis.update(result).get();
                 RabbitMQ.broadcast(result, getRabbitConnection()).get();
                 return new HOTPCacheData(result.getLength(), result.getCounter(), result.getKey());
             }
@@ -713,7 +713,7 @@ public class InternalAPI {
 
         // Redis
         try {
-            Long result = Redis.getAuthy(uuid, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+            Long result = Redis.getAuthy(uuid).get();
             if (result != null) {
                 if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in Redis. Value: " + result);
@@ -741,7 +741,7 @@ public class InternalAPI {
                     logger.info(uuid + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+                Redis.update(result).get();
                 RabbitMQ.broadcast(result, getRabbitConnection()).get();
                 return result.getID();
             }
@@ -780,7 +780,7 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ConfigUtil.getIPTime(), ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode());
+        Redis.update(result, ConfigUtil.getIPTime());
 
         // RabbitMQ
         try {
@@ -807,7 +807,7 @@ public class InternalAPI {
 
         // Redis
         try {
-            Boolean result = Redis.getLogin(uuid, ip, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+            Boolean result = Redis.getLogin(uuid, ip).get();
             if (result != null) {
                 if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " " + ip + " found in Redis. Value: " + result);
@@ -835,7 +835,7 @@ public class InternalAPI {
                     logger.info(uuid + " " + ip + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, ipTime, ConfigUtil.getRedisPool(), ConfigUtil.getRedisConfigNode()).get();
+                Redis.update(result, ipTime).get();
                 RabbitMQ.broadcast(result, ipTime, getRabbitConnection()).get();
                 return true;
             }

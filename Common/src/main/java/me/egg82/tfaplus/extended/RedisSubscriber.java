@@ -30,7 +30,7 @@ public class RedisSubscriber {
     private static Base64.Decoder decoder = Base64.getDecoder();
 
     public RedisSubscriber(JedisPool pool, ConfigurationNode redisConfigNode) {
-        try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+        try (Jedis redis = RedisUtil.getRedis()) {
             if (redis == null) {
                 return;
             }

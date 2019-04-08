@@ -172,14 +172,14 @@ public class TFAPlus {
         if (cachedConfig.getSQLType() == SQLType.MySQL) {
             MySQL.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     MySQL.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                         updateSQL();
                     })
             );
         } else if (cachedConfig.getSQLType() == SQLType.SQLite) {
             SQLite.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     SQLite.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                         updateSQL();
                     })
             );
@@ -201,13 +201,13 @@ public class TFAPlus {
         if (cachedConfig.getSQLType() == SQLType.MySQL) {
             MySQL.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     MySQL.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                     })
             );
         } else if (cachedConfig.getSQLType() == SQLType.SQLite) {
             SQLite.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     SQLite.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                     })
             );
         }
@@ -240,7 +240,7 @@ public class TFAPlus {
                 }
 
                 if (result != null) {
-                    Redis.updateFromQueue(result, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis")).get();
+                    Redis.updateFromQueue(result, cachedConfig.getIPTime()).get();
                 }
             } catch (ExecutionException ex) {
                 logger.error(ex.getMessage(), ex);
