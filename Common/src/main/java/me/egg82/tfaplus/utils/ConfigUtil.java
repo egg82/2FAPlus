@@ -15,7 +15,6 @@ import ninja.egg82.sql.SQL;
 import ninja.leaping.configurate.ConfigurationNode;
 import redis.clients.jedis.JedisPool;
 
-import javax.annotation.Nullable;
 import java.util.Optional;
 
 public class ConfigUtil {
@@ -23,7 +22,7 @@ public class ConfigUtil {
      * Grabs the config instance from ServiceLocator
      * @return instance of the Configuration class, may return null
      */
-    public static @Nullable Configuration getConfig()
+    public static Configuration getConfig()
     {
         Configuration config;
 
@@ -41,7 +40,7 @@ public class ConfigUtil {
      * Grabs the cached config instance from ServiceLocator
      * @return instance of the CachedConfigValues class, may return null
      */
-    public static @Nullable CachedConfigValues getCachedConfig()
+    public static CachedConfigValues getCachedConfig()
     {
         CachedConfigValues cachedConfig;
 
@@ -55,7 +54,7 @@ public class ConfigUtil {
         return null;
     }
 
-    public static @Nullable SQL getSQL()
+    public static SQL getSQL()
     {
         return getCachedConfig().getSQL();
     }
