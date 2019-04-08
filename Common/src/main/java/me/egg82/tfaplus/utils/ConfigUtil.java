@@ -113,10 +113,6 @@ public class ConfigUtil {
         return getCachedConfig().getAuthy();
     }
 
-    public static CachedConfigValues.Builder builder() {
-        return CachedConfigValues.builder();
-    }
-
     public static ConfigurationNode getStorageConfigNode() {
         return getConfig().getNode("storage");
     }
