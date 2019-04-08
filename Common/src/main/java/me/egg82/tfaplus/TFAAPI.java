@@ -1,25 +1,20 @@
 package me.egg82.tfaplus;
 
-import com.rabbitmq.client.Connection;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
-import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.services.InternalAPI;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import me.egg82.tfaplus.utils.RabbitMQUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 public class TFAAPI {
     private static final Logger logger = LoggerFactory.getLogger(TFAAPI.class);
@@ -127,15 +122,6 @@ public class TFAAPI {
             throw new IllegalArgumentException("codeLength cannot be <= 0.");
         }
 
-        CachedConfigValues cachedConfig = ConfigUtil.getCachedConfig();
-        Configuration config = ConfigUtil.getConfig();
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.registerTOTP(uuid, codeLength);
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
         return internalApi.registerTOTP(uuid, codeLength);
     }
 
@@ -165,15 +151,6 @@ public class TFAAPI {
         }
         if (initialCounterValue < 0) {
             throw new IllegalArgumentException("initialCounterValue cannot be < 0.");
-        }
-
-        CachedConfigValues cachedConfig = ConfigUtil.getCachedConfig();
-        Configuration config = ConfigUtil.getConfig();
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.registerHOTP(uuid, codeLength, initialCounterValue);
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
         }
 
         return internalApi.registerHOTP(uuid, codeLength, initialCounterValue);
