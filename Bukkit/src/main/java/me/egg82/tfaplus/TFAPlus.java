@@ -153,7 +153,7 @@ public class TFAPlus {
             return;
         }
 
-        workPool.submit(() -> new RedisSubscriber(cachedConfig.getRedisPool(), config.getNode("redis")));
+        workPool.submit(() -> new RedisSubscriber());
         ServiceLocator.register(new RabbitMQReceiver(cachedConfig.getRabbitConnectionFactory()));
     }
 

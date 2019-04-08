@@ -11,13 +11,11 @@ import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.analytics.utils.JSONUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
-import ninja.leaping.configurate.ConfigurationNode;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.exceptions.JedisException;
 
@@ -29,7 +27,7 @@ public class RedisSubscriber {
 
     private static Base64.Decoder decoder = Base64.getDecoder();
 
-    public RedisSubscriber(JedisPool pool, ConfigurationNode redisConfigNode) {
+    public RedisSubscriber() {
         try (Jedis redis = RedisUtil.getRedis()) {
             if (redis == null) {
                 return;
