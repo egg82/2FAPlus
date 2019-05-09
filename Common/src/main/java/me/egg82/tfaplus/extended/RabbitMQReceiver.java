@@ -1,10 +1,6 @@
 package me.egg82.tfaplus.extended;
 
 import com.rabbitmq.client.*;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
@@ -20,6 +16,11 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Base64;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 public class RabbitMQReceiver {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -88,7 +89,7 @@ public class RabbitMQReceiver {
                         CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                         Configuration config = ServiceLocator.get(Configuration.class);
 
-                        InternalAPI.add(new LoginData(uuid, ip, created), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                        InternalAPI.add(new LoginData(uuid, ip, created));
                     } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
@@ -120,7 +121,7 @@ public class RabbitMQReceiver {
                         CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                         Configuration config = ServiceLocator.get(Configuration.class);
 
-                        InternalAPI.add(new AuthyData(uuid, i), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                        InternalAPI.add(new AuthyData(uuid, i));
                     } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
@@ -153,7 +154,7 @@ public class RabbitMQReceiver {
                         CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                         Configuration config = ServiceLocator.get(Configuration.class);
 
-                        InternalAPI.add(new TOTPData(uuid, length, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                        InternalAPI.add(new TOTPData(uuid, length, key));
                     } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
@@ -187,7 +188,7 @@ public class RabbitMQReceiver {
                         CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
                         Configuration config = ServiceLocator.get(Configuration.class);
 
-                        InternalAPI.add(new HOTPData(uuid, length, counter, key), cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                        InternalAPI.add(new HOTPData(uuid, length, counter, key));
                     } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
@@ -211,7 +212,7 @@ public class RabbitMQReceiver {
                     }
 
                     // In this case, the message is the "UUID"
-                    InternalAPI.delete(message, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType());
+                    InternalAPI.delete(message);
                 }
             };
             channel.basicConsume(deleteQueueName, true, deleteConsumer);

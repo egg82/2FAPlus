@@ -1,9 +1,5 @@
 package me.egg82.tfaplus.utils;
 
-import java.awt.image.BufferedImage;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Map;
 import me.egg82.tfaplus.renderers.ImageRenderer;
 import me.egg82.tfaplus.renderers.QRRenderer;
 import org.bukkit.Bukkit;
@@ -14,6 +10,11 @@ import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Map;
 
 /**
  * Largely taken from SecureMyAccount

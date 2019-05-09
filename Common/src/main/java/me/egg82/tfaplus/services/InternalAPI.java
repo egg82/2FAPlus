@@ -1,22 +1,16 @@
 package me.egg82.tfaplus.services;
 
 import com.authy.AuthyException;
-import com.authy.api.*;
+import com.authy.api.Hash;
+import com.authy.api.Token;
+import com.authy.api.User;
+import com.authy.api.Users;
 import com.eatthepath.otp.HmacOneTimePasswordGenerator;
 import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.rabbitmq.client.Connection;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import me.egg82.tfaplus.core.*;
@@ -24,13 +18,22 @@ import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.ServiceKeys;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
-import ninja.egg82.sql.SQL;
+import me.egg82.tfaplus.utils.ConfigUtil;
+import me.egg82.tfaplus.utils.RabbitMQUtil;
 import ninja.egg82.tuples.objects.ObjectObjectPair;
-import ninja.leaping.configurate.ConfigurationNode;
 import org.apache.commons.codec.binary.Base32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.JedisPool;
+
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class InternalAPI {
     private static final Logger logger = LoggerFactory.getLogger(InternalAPI.class);
@@ -47,36 +50,36 @@ public class InternalAPI {
         verificationCache = Caffeine.newBuilder().expireAfterWrite(duration, unit).build(k -> Boolean.FALSE);
     }
 
-    public static void add(LoginData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+    public static void add(LoginData data) {
         loginCache.put(new ObjectObjectPair<>(data.getUUID(), data.getIP()), Boolean.TRUE);
-        if (sqlType == SQLType.SQLite) {
-            SQLite.addLogin(data, sql, storageConfigNode);
+        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+            SQLite.addLogin(data, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
         }
     }
 
-    public static void add(AuthyData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+    public static void add(AuthyData data) {
         authyCache.put(data.getUUID(), data.getID());
-        if (sqlType == SQLType.SQLite) {
-            SQLite.addAuthy(data, sql, storageConfigNode);
+        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+            SQLite.addAuthy(data, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
         }
     }
 
-    public static void add(TOTPData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+    public static void add(TOTPData data) {
         totpCache.put(data.getUUID(), new TOTPCacheData(data.getLength(), data.getKey()));
-        if (sqlType == SQLType.SQLite) {
-            SQLite.addTOTP(data, sql, storageConfigNode);
+        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+            SQLite.addTOTP(data, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
         }
     }
 
-    public static void add(HOTPData data, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+    public static void add(HOTPData data) {
         hotpCache.put(data.getUUID(), new HOTPCacheData(data.getLength(), data.getCounter(), data.getKey()));
-        if (sqlType == SQLType.SQLite) {
-            SQLite.addHOTP(data, sql, storageConfigNode);
+        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+            SQLite.addHOTP(data, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
         }
     }
 
-    public String registerHOTP(UUID uuid, long codeLength, long initialCounter, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public String registerHOTP(UUID uuid, long codeLength, long initialCounter) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Registering HOTP " + uuid);
         }
 
@@ -95,36 +98,25 @@ public class InternalAPI {
 
         // SQL
         HOTPData result = null;
-        try {
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.updateHOTP(sql, storageConfigNode, uuid, codeLength, initialCounter, key).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.updateHOTP(sql, storageConfigNode, uuid, codeLength, initialCounter, key).get();
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
+        result = getHotpData(uuid, codeLength, initialCounter, key, result);
 
         if (result == null) {
             return null;
         }
 
         // Redis
-        Redis.update(result, redisPool, redisConfigNode);
+        Redis.update(result);
 
         // RabbitMQ
-        RabbitMQ.broadcast(result, rabbitConnection);
+        broadcastResult(result);
 
         hotpCache.put(uuid, new HOTPCacheData(codeLength, result.getCounter(), key));
 
         return encoder.encodeToString(key.getEncoded());
     }
 
-    public String registerTOTP(UUID uuid, long codeLength, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public String registerTOTP(UUID uuid, long codeLength) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Registering TOTP " + uuid);
         }
 
@@ -144,10 +136,10 @@ public class InternalAPI {
         // SQL
         TOTPData result = null;
         try {
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.updateTOTP(sql, storageConfigNode, uuid, codeLength, key).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.updateTOTP(sql, storageConfigNode, uuid, codeLength, key).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.updateTOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, codeLength, key).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.updateTOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, codeLength, key).get();
             }
         } catch (ExecutionException ex) {
             logger.error(ex.getMessage(), ex);
@@ -161,24 +153,32 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, redisPool, redisConfigNode);
+        Redis.update(result);
 
         // RabbitMQ
-        RabbitMQ.broadcast(result, rabbitConnection);
+        try {
+            RabbitMQ.broadcast(result, getRabbitConnection());
+        } catch (IOException | TimeoutException e) {
+            logger.error(e.getMessage(), e);
+        }
 
         totpCache.put(uuid, new TOTPCacheData(codeLength, key));
 
         return encoder.encodeToString(key.getEncoded());
     }
 
-    public boolean registerAuthy(UUID uuid, String email, String phone, String countryCode, Users users, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private static Connection getRabbitConnection() throws IOException, TimeoutException {
+        return RabbitMQUtil.getConnection(ConfigUtil.getCachedConfig().getRabbitConnectionFactory());
+    }
+
+    public boolean registerAuthy(UUID uuid, String email, String phone, String countryCode) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Registering Authy " + uuid + " (" + email + ", +" + countryCode + " " + phone + ")");
         }
 
         User user;
         try {
-           user = users.createUser(email, phone, countryCode);
+           user = getAuthyUsers().createUser(email, phone, countryCode);
         } catch (AuthyException ex) {
             logger.error(ex.getMessage(), ex);
             return false;
@@ -192,10 +192,10 @@ public class InternalAPI {
         // SQL
         AuthyData result = null;
         try {
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.updateAuthy(sql, storageConfigNode, uuid, user.getId()).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.updateAuthy(sql, storageConfigNode, uuid, user.getId()).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.updateAuthy(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, user.getId()).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.updateAuthy(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, user.getId()).get();
             }
         } catch (ExecutionException ex) {
             logger.error(ex.getMessage(), ex);
@@ -209,18 +209,26 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, redisPool, redisConfigNode);
+        Redis.update(result);
 
         // RabbitMQ
-        RabbitMQ.broadcast(result, rabbitConnection);
+        try {
+            RabbitMQ.broadcast(result, getRabbitConnection());
+        } catch (IOException | TimeoutException e) {
+            logger.error(e.getMessage(), e);
+        }
 
         authyCache.put(uuid, result.getID());
 
         return true;
     }
 
-    public boolean delete(UUID uuid, Users users, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private Users getAuthyUsers() {
+        return ConfigUtil.getAuthy().get().getUsers();
+    }
+
+    public boolean delete(UUID uuid, Users users) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Removing data for " + uuid);
         }
 
@@ -236,10 +244,10 @@ public class InternalAPI {
 
         AuthyData result = null;
         try {
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.getAuthyData(uuid, sql, storageConfigNode).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.getAuthyData(uuid, sql, storageConfigNode).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
             }
         } catch (ExecutionException ex) {
             logger.error(ex.getMessage(), ex);
@@ -264,22 +272,30 @@ public class InternalAPI {
         }
 
         // SQL
-        if (sqlType == SQLType.MySQL) {
-            MySQL.delete(uuid, sql, storageConfigNode);
-        } else if (sqlType == SQLType.SQLite) {
-            SQLite.delete(uuid, sql, storageConfigNode);
+        if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+            MySQL.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
+        } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+            SQLite.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
         }
 
         // Redis
-        Redis.delete(uuid, redisPool, redisConfigNode);
+        Redis.delete(uuid);
 
         // RabbitMQ
-        RabbitMQ.delete(uuid, rabbitConnection);
+        rabbitDelete(uuid);
 
         return true;
     }
 
-    public static void delete(UUID uuid, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
+    private void rabbitDelete(UUID uuid) {
+        try {
+            RabbitMQ.delete(uuid, getRabbitConnection());
+        } catch (IOException | TimeoutException e) {
+            logger.error(e.getMessage(), e);
+        }
+    }
+
+    public static void delete(UUID uuid) {
         for (Map.Entry<ObjectObjectPair<UUID, String>, Boolean> kvp : loginCache.asMap().entrySet()) {
             if (uuid.equals(kvp.getKey().getFirst())) {
                 loginCache.invalidate(kvp.getKey());
@@ -289,14 +305,14 @@ public class InternalAPI {
         authyCache.invalidate(uuid);
         verificationCache.invalidate(uuid);
 
-        if (sqlType == SQLType.SQLite) {
-            SQLite.delete(uuid, sql, storageConfigNode);
+        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+            SQLite.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
         }
     }
 
-    public static void delete(String uuid, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType) {
-        if (sqlType == SQLType.SQLite) {
-            SQLite.delete(uuid, sql, storageConfigNode);
+    public static void delete(String uuid) {
+        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+            SQLite.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
         }
     }
 
@@ -308,12 +324,12 @@ public class InternalAPI {
         return retVal;
     }
 
-    public Optional<Boolean> verifyAuthy(UUID uuid, String token, Tokens tokens, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public Optional<Boolean> verifyAuthy(UUID uuid, String token) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Verifying Authy " + uuid + " with " + token);
         }
 
-        long id = authyCache.get(uuid, k -> getAuthyExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug));
+        long id = authyCache.get(uuid, k -> getAuthyExpensive(uuid));
         if (id < 0) {
             logger.warn(uuid + " has not been registered.");
             return Optional.empty();
@@ -324,7 +340,7 @@ public class InternalAPI {
 
         Token verification;
         try {
-            verification = tokens.verify((int) id, token, options);
+            verification = ConfigUtil.getTokens().verify((int) id, token, options);
         } catch (AuthyException ex) {
             logger.error(ex.getMessage(), ex);
             return Optional.empty();
@@ -339,8 +355,8 @@ public class InternalAPI {
         return Optional.of(Boolean.TRUE);
     }
 
-    public Optional<Boolean> verifyTOTP(UUID uuid, String token, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public Optional<Boolean> verifyTOTP(UUID uuid, String token) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Verifying TOTP " + uuid + " with " + token);
         }
 
@@ -352,7 +368,7 @@ public class InternalAPI {
             return Optional.of(Boolean.FALSE);
         }
 
-        TOTPCacheData data = totpCache.get(uuid, k -> getTOTPExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug));
+        TOTPCacheData data = totpCache.get(uuid, k -> getTOTPExpensive(uuid));
         if (data == null) {
             logger.warn(uuid + " has not been registered.");
             return Optional.empty();
@@ -387,8 +403,8 @@ public class InternalAPI {
         return Optional.of(Boolean.FALSE);
     }
 
-    public Optional<Boolean> verifyHOTP(UUID uuid, String token, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public Optional<Boolean> verifyHOTP(UUID uuid, String token) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Verifying HOTP " + uuid + " with " + token);
         }
 
@@ -400,7 +416,7 @@ public class InternalAPI {
             return Optional.of(Boolean.FALSE);
         }
 
-        HOTPCacheData data = hotpCache.get(uuid, k -> getHOTPExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug));
+        HOTPCacheData data = hotpCache.get(uuid, k -> getHOTPExpensive(uuid));
         if (data == null) {
             logger.warn(uuid + " has not been registered.");
             return Optional.empty();
@@ -419,7 +435,7 @@ public class InternalAPI {
         for (int i = 0; i <= 9; i++) {
             try {
                 if (hotp.generateOneTimePassword(data.getKey(), data.getCounter() + i) == intToken) {
-                    setHOTP(uuid, data.getLength(), data.getCounter() + i, data.getKey(), redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug);
+                    setHOTP(uuid, data.getLength(), data.getCounter() + i, data.getKey());
                     verificationCache.put(uuid, Boolean.TRUE);
                     return Optional.of(Boolean.TRUE);
                 }
@@ -432,18 +448,35 @@ public class InternalAPI {
         return Optional.of(Boolean.FALSE);
     }
 
-    private void setHOTP(UUID uuid, long length, long counter, SecretKey key, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private void setHOTP(UUID uuid, long length, long counter, SecretKey key) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Setting new HOTP counter for " + uuid);
         }
 
         // SQL
         HOTPData result = null;
+        result = getHotpData(uuid, length, counter, key, result);
+
+        if (result == null) {
+            return;
+        }
+
+        // Redis
+        Redis.update(result);
+
+        // Rabbit
+        broadcastResult(result);
+
+        // Cache
+        hotpCache.put(uuid, new HOTPCacheData(length, counter, key));
+    }
+
+    private HOTPData getHotpData(UUID uuid, long length, long counter, SecretKey key, HOTPData result) {
         try {
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.updateHOTP(sql, storageConfigNode, uuid, length, counter, key).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.updateHOTP(sql, storageConfigNode, uuid, length, counter, key).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.updateHOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, length, counter, key).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.updateHOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, length, counter, key).get();
             }
         } catch (ExecutionException ex) {
             logger.error(ex.getMessage(), ex);
@@ -451,27 +484,15 @@ public class InternalAPI {
             logger.error(ex.getMessage(), ex);
             Thread.currentThread().interrupt();
         }
-
-        if (result == null) {
-            return;
-        }
-
-        // Redis
-        Redis.update(result, redisPool, redisConfigNode);
-
-        // Rabbit
-        RabbitMQ.broadcast(result, rabbitConnection);
-
-        // Cache
-        hotpCache.put(uuid, new HOTPCacheData(length, counter, key));
+        return result;
     }
 
-    public boolean seekHOTPCounter(UUID uuid, String[] tokens, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public boolean seekHOTPCounter(UUID uuid, String[] tokens) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Seeking HOTP counter for " + uuid);
         }
 
-        HOTPCacheData data = hotpCache.get(uuid, k -> getHOTPExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug));
+        HOTPCacheData data = hotpCache.get(uuid, k -> getHOTPExpensive(uuid));
         if (data == null) {
             logger.warn(uuid + " has not been registered.");
             return false;
@@ -527,28 +548,17 @@ public class InternalAPI {
 
         // SQL
         HOTPData result = null;
-        try {
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.updateHOTP(sql, storageConfigNode, uuid, data.getLength(), counter, data.getKey()).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.updateHOTP(sql, storageConfigNode, uuid, data.getLength(), counter, data.getKey()).get();
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
+        result = getHotpData(uuid, data.getLength(), counter, data.getKey(), result);
 
         if (result == null) {
             return false;
         }
 
         // Redis
-        Redis.update(result, redisPool, redisConfigNode);
+        Redis.update(result);
 
         // Rabbit
-        RabbitMQ.broadcast(result, rabbitConnection);
+        broadcastResult(result);
 
         // Cache
         hotpCache.put(uuid, new HOTPCacheData(data.getLength(), counter, data.getKey()));
@@ -556,50 +566,58 @@ public class InternalAPI {
         return true;
     }
 
-    public boolean hasAuthy(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private void broadcastResult(HOTPData result) {
+        try {
+            RabbitMQ.broadcast(result, getRabbitConnection());
+        } catch (IOException | TimeoutException e) {
+            logger.error(e.getMessage(), e);
+        }
+    }
+
+    public boolean hasAuthy(UUID uuid) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting Authy status for " + uuid);
         }
 
-        return authyCache.get(uuid, k -> getAuthyExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug)) >= 0L;
+        return authyCache.get(uuid, k -> getAuthyExpensive(uuid)) >= 0L;
     }
 
-    public boolean hasTOTP(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public boolean hasTOTP(UUID uuid) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting TOTP status for " + uuid);
         }
 
-        return totpCache.get(uuid, k -> getTOTPExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug)) != null;
+        return totpCache.get(uuid, k -> getTOTPExpensive(uuid)) != null;
     }
 
-    public boolean hasHOTP(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public boolean hasHOTP(UUID uuid) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting HOTP status for " + uuid);
         }
 
-        return hotpCache.get(uuid, k -> getHOTPExpensive(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug)) != null;
+        return hotpCache.get(uuid, k -> getHOTPExpensive(uuid)) != null;
     }
 
-    public boolean isRegistered(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public boolean isRegistered(UUID uuid) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting registration status for " + uuid);
         }
 
-        return hasAuthy(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug)
-                || hasTOTP(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug)
-                || hasHOTP(uuid, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug);
+        return hasAuthy(uuid)
+                || hasTOTP(uuid)
+                || hasHOTP(uuid);
     }
 
-    private TOTPCacheData getTOTPExpensive(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private TOTPCacheData getTOTPExpensive(UUID uuid) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting TOTP for " + uuid);
         }
 
         // Redis
         try {
-            TOTPCacheData result = Redis.getTOTP(uuid, redisPool, redisConfigNode).get();
+            TOTPCacheData result = Redis.getTOTP(uuid).get();
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in Redis. Value: " + result);
                 }
                 return result;
@@ -614,22 +632,22 @@ public class InternalAPI {
         // SQL
         try {
             TOTPData result = null;
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.getTOTPData(uuid, sql, storageConfigNode).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.getTOTPData(uuid, sql, storageConfigNode).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.getTOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.getTOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
             }
 
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, redisPool, redisConfigNode).get();
-                RabbitMQ.broadcast(result, rabbitConnection).get();
+                Redis.update(result).get();
+                RabbitMQ.broadcast(result, getRabbitConnection()).get();
                 return new TOTPCacheData(result.getLength(), result.getKey());
             }
-        } catch (ExecutionException ex) {
+        } catch (ExecutionException | IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         } catch (InterruptedException ex) {
             logger.error(ex.getMessage(), ex);
@@ -639,16 +657,16 @@ public class InternalAPI {
         return null;
     }
 
-    private HOTPCacheData getHOTPExpensive(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private HOTPCacheData getHOTPExpensive(UUID uuid) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting HOTP for " + uuid);
         }
 
         // Redis
         try {
-            HOTPCacheData result = Redis.getHOTP(uuid, redisPool, redisConfigNode).get();
+            HOTPCacheData result = Redis.getHOTP(uuid).get();
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in Redis. Value: " + result);
                 }
                 return result;
@@ -663,22 +681,22 @@ public class InternalAPI {
         // SQL
         try {
             HOTPData result = null;
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.getHOTPData(uuid, sql, storageConfigNode).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.getHOTPData(uuid, sql, storageConfigNode).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.getHOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.getHOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
             }
 
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, redisPool, redisConfigNode).get();
-                RabbitMQ.broadcast(result, rabbitConnection).get();
+                Redis.update(result).get();
+                RabbitMQ.broadcast(result, getRabbitConnection()).get();
                 return new HOTPCacheData(result.getLength(), result.getCounter(), result.getKey());
             }
-        } catch (ExecutionException ex) {
+        } catch (ExecutionException | IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         } catch (InterruptedException ex) {
             logger.error(ex.getMessage(), ex);
@@ -688,16 +706,16 @@ public class InternalAPI {
         return null;
     }
 
-    private long getAuthyExpensive(UUID uuid, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private long getAuthyExpensive(UUID uuid) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting Authy ID for " + uuid);
         }
 
         // Redis
         try {
-            Long result = Redis.getAuthy(uuid, redisPool, redisConfigNode).get();
+            Long result = Redis.getAuthy(uuid).get();
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in Redis. Value: " + result);
                 }
                 return result;
@@ -712,22 +730,22 @@ public class InternalAPI {
         // SQL
         try {
             AuthyData result = null;
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.getAuthyData(uuid, sql, storageConfigNode).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.getAuthyData(uuid, sql, storageConfigNode).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
             }
 
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, redisPool, redisConfigNode).get();
-                RabbitMQ.broadcast(result, rabbitConnection).get();
+                Redis.update(result).get();
+                RabbitMQ.broadcast(result, getRabbitConnection()).get();
                 return result.getID();
             }
-        } catch (ExecutionException ex) {
+        } catch (ExecutionException | IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         } catch (InterruptedException ex) {
             logger.error(ex.getMessage(), ex);
@@ -737,18 +755,18 @@ public class InternalAPI {
         return -1L;
     }
 
-    public static void setLogin(UUID uuid, String ip, long ipTime, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public static void setLogin(UUID uuid, String ip) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Setting login for " + uuid + " (" + ip + ")");
         }
 
         // SQL
         LoginData result = null;
         try {
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.updateLogin(sql, storageConfigNode, uuid, ip).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.updateLogin(sql, storageConfigNode, uuid, ip).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.updateLogin(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, ip).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.updateLogin(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, ip).get();
             }
         } catch (ExecutionException ex) {
             logger.error(ex.getMessage(), ex);
@@ -762,32 +780,36 @@ public class InternalAPI {
         }
 
         // Redis
-        Redis.update(result, ipTime, redisPool, redisConfigNode);
+        Redis.update(result, ConfigUtil.getIPTime());
 
         // RabbitMQ
-        RabbitMQ.broadcast(result, ipTime, rabbitConnection);
+        try {
+            RabbitMQ.broadcast(result, ConfigUtil.getIPTime(), getRabbitConnection());
+        } catch (IOException | TimeoutException e) {
+            logger.error(e.getMessage(), e);
+        }
 
         loginCache.put(new ObjectObjectPair<>(uuid, ip), Boolean.TRUE);
     }
 
-    public static boolean getLogin(UUID uuid, String ip, long ipTime, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    public static boolean getLogin(UUID uuid, String ip, long ipTime) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting login for " + uuid + " (" + ip + ")");
         }
 
-        return loginCache.get(new ObjectObjectPair<>(uuid, ip), k -> getLoginExpensive(uuid, ip, ipTime, redisPool, redisConfigNode, rabbitConnection, sql, storageConfigNode, sqlType, debug));
+        return loginCache.get(new ObjectObjectPair<>(uuid, ip), k -> getLoginExpensive(uuid, ip, ipTime));
     }
 
-    private static boolean getLoginExpensive(UUID uuid, String ip, long ipTime, JedisPool redisPool, ConfigurationNode redisConfigNode, Connection rabbitConnection, SQL sql, ConfigurationNode storageConfigNode, SQLType sqlType, boolean debug) {
-        if (debug) {
+    private static boolean getLoginExpensive(UUID uuid, String ip, long ipTime) {
+        if (ConfigUtil.isDebugging()) {
             logger.info("Getting expensive login for " + uuid + " (" + ip + ")");
         }
 
         // Redis
         try {
-            Boolean result = Redis.getLogin(uuid, ip, redisPool, redisConfigNode).get();
+            Boolean result = Redis.getLogin(uuid, ip).get();
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " " + ip + " found in Redis. Value: " + result);
                 }
                 return result;
@@ -802,22 +824,22 @@ public class InternalAPI {
         // SQL
         try {
             LoginData result = null;
-            if (sqlType == SQLType.MySQL) {
-                result = MySQL.getLoginData(uuid, ip, sql, storageConfigNode).get();
-            } else if (sqlType == SQLType.SQLite) {
-                result = SQLite.getLoginData(uuid, ip, sql, storageConfigNode).get();
+            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
+                result = MySQL.getLoginData(uuid, ip, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
+            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
+                result = SQLite.getLoginData(uuid, ip, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
             }
 
             if (result != null) {
-                if (debug) {
+                if (ConfigUtil.isDebugging()) {
                     logger.info(uuid + " " + ip + " found in storage. Value: " + result);
                 }
                 // Update messaging/Redis, force same-thread
-                Redis.update(result, ipTime, redisPool, redisConfigNode).get();
-                RabbitMQ.broadcast(result, ipTime, rabbitConnection).get();
+                Redis.update(result, ipTime).get();
+                RabbitMQ.broadcast(result, ipTime, getRabbitConnection()).get();
                 return true;
             }
-        } catch (ExecutionException ex) {
+        } catch (ExecutionException | IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         } catch (InterruptedException ex) {
             logger.error(ex.getMessage(), ex);

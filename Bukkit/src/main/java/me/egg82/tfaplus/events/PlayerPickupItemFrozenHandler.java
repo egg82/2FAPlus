@@ -1,6 +1,5 @@
 package me.egg82.tfaplus.events;
 
-import java.util.function.Consumer;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import ninja.egg82.service.ServiceLocator;
@@ -8,6 +7,8 @@ import ninja.egg82.service.ServiceNotFoundException;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.function.Consumer;
 
 public class PlayerPickupItemFrozenHandler implements Consumer<PlayerPickupItemEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());

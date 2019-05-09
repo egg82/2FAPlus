@@ -1,12 +1,6 @@
 package me.egg82.tfaplus.events;
 
 import com.rabbitmq.client.Connection;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
@@ -23,6 +17,13 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -100,12 +101,12 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
 
     private boolean canLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime());
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
 
-        return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime());
     }
 
     private void kickPlayer(Configuration config, PlayerLoginEvent event) {

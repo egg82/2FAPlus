@@ -2,13 +2,14 @@ package me.egg82.tfaplus.utils;
 
 import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 
 public class ConfigurationVersionUtil {
     private ConfigurationVersionUtil() {}

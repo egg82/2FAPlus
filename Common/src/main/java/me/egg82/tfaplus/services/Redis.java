@@ -1,24 +1,22 @@
 package me.egg82.tfaplus.services;
 
-import java.util.Base64;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import javax.crypto.spec.SecretKeySpec;
-
 import me.egg82.tfaplus.core.*;
 import me.egg82.tfaplus.extended.ServiceKeys;
 import me.egg82.tfaplus.utils.RedisUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.analytics.utils.JSONUtil;
-import ninja.leaping.configurate.ConfigurationNode;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.exceptions.JedisException;
+
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class Redis {
     private static final Logger logger = LoggerFactory.getLogger(Redis.class);
@@ -31,9 +29,9 @@ public class Redis {
 
     private Redis() {}
 
-    public static CompletableFuture<Boolean> updateFromQueue(SQLFetchResult sqlResult, long ipTime, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> updateFromQueue(SQLFetchResult sqlResult, long ipTime) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis == null) {
                     return Boolean.FALSE;
                 }
@@ -127,9 +125,9 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Boolean> update(LoginData sqlResult, long ipTime, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> update(LoginData sqlResult, long ipTime) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis == null) {
                     return Boolean.FALSE;
                 }
@@ -176,9 +174,9 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Boolean> update(AuthyData sqlResult, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> update(AuthyData sqlResult) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis == null) {
                     return Boolean.FALSE;
                 }
@@ -201,9 +199,9 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Boolean> update(TOTPData sqlResult, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> update(TOTPData sqlResult) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis == null) {
                     return Boolean.FALSE;
                 }
@@ -228,9 +226,9 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Boolean> update(HOTPData sqlResult, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> update(HOTPData sqlResult) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis == null) {
                     return Boolean.FALSE;
                 }
@@ -256,9 +254,9 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Boolean> delete(String ip, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> delete(String ip) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis == null) {
                     return Boolean.FALSE;
                 }
@@ -293,9 +291,9 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Boolean> delete(UUID uuid, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> delete(UUID uuid) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis == null) {
                     return Boolean.FALSE;
                 }
@@ -331,11 +329,11 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Boolean> getLogin(UUID uuid, String ip, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Boolean> getLogin(UUID uuid, String ip) {
         return CompletableFuture.supplyAsync(() -> {
             Boolean result = null;
 
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis != null) {
                     String key = "2faplus:login:" + uuid + "|" + ip;
 
@@ -353,11 +351,11 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<Long> getAuthy(UUID uuid, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<Long> getAuthy(UUID uuid) {
         return CompletableFuture.supplyAsync(() -> {
             Long result = null;
 
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis != null) {
                     String key = "2faplus:authy:" + uuid;
 
@@ -375,11 +373,11 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<TOTPCacheData> getTOTP(UUID uuid, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<TOTPCacheData> getTOTP(UUID uuid) {
         return CompletableFuture.supplyAsync(() -> {
             TOTPCacheData result = null;
 
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis != null) {
                     String key = "2faplus:totp:" + uuid;
 
@@ -398,11 +396,11 @@ public class Redis {
         });
     }
 
-    public static CompletableFuture<HOTPCacheData> getHOTP(UUID uuid, JedisPool pool, ConfigurationNode redisConfigNode) {
+    public static CompletableFuture<HOTPCacheData> getHOTP(UUID uuid) {
         return CompletableFuture.supplyAsync(() -> {
             HOTPCacheData result = null;
 
-            try (Jedis redis = RedisUtil.getRedis(pool, redisConfigNode)) {
+            try (Jedis redis = RedisUtil.getRedis()) {
                 if (redis != null) {
                     String key = "2faplus:hotp:" + uuid;
 

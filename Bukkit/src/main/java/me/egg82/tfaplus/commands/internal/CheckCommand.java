@@ -2,8 +2,6 @@ package me.egg82.tfaplus.commands.internal;
 
 import co.aikar.taskchain.TaskChain;
 import co.aikar.taskchain.TaskChainAbortAction;
-import java.io.IOException;
-import java.util.UUID;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.services.lookup.PlayerLookup;
 import me.egg82.tfaplus.utils.LogUtil;
@@ -11,6 +9,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.UUID;
 
 public class CheckCommand implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(getClass());

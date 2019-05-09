@@ -3,15 +3,16 @@ package me.egg82.tfaplus.extended;
 import com.authy.AuthyApiClient;
 import com.google.common.collect.ImmutableSet;
 import com.rabbitmq.client.ConnectionFactory;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import me.egg82.tfaplus.core.FreezeConfigContainer;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.services.InternalAPI;
 import ninja.egg82.sql.SQL;
 import ninja.egg82.tuples.longs.LongObjectPair;
 import redis.clients.jedis.JedisPool;
+
+import java.util.Collection;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 public class CachedConfigValues {
     private CachedConfigValues() {}

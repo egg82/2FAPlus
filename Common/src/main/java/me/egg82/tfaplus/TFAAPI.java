@@ -1,23 +1,20 @@
 package me.egg82.tfaplus;
 
-import com.rabbitmq.client.Connection;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
-import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.services.InternalAPI;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
-import me.egg82.tfaplus.utils.RabbitMQUtil;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 public class TFAAPI {
     private static final Logger logger = LoggerFactory.getLogger(TFAAPI.class);
@@ -102,29 +99,12 @@ public class TFAAPI {
             throw new IllegalArgumentException("countryCode cannot be empty.");
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return false;
-        }
-
-        if (!cachedConfig.getAuthy().isPresent()) {
+        if (!ConfigUtil.getCachedConfig().getAuthy().isPresent()) {
             logger.error("Authy is not present (missing API key in config?)");
             return false;
         }
 
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.registerAuthy(uuid, email, phone, countryCode, cachedConfig.getAuthy().get().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        return internalApi.registerAuthy(uuid, email, phone, countryCode, cachedConfig.getAuthy().get().getUsers(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return internalApi.registerAuthy(uuid, email, phone, countryCode);
     }
 
     /**
@@ -142,24 +122,7 @@ public class TFAAPI {
             throw new IllegalArgumentException("codeLength cannot be <= 0.");
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return null;
-        }
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.registerTOTP(uuid, codeLength, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        return internalApi.registerTOTP(uuid, codeLength, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return internalApi.registerTOTP(uuid, codeLength);
     }
 
     /**
@@ -190,24 +153,7 @@ public class TFAAPI {
             throw new IllegalArgumentException("initialCounterValue cannot be < 0.");
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return null;
-        }
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.registerHOTP(uuid, codeLength, initialCounterValue, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        return internalApi.registerHOTP(uuid, codeLength, initialCounterValue, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return internalApi.registerHOTP(uuid, codeLength, initialCounterValue);
     }
 
     /**
@@ -253,24 +199,7 @@ public class TFAAPI {
             throw new IllegalArgumentException("tokens length cannot be <= 1");
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return false;
-        }
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.seekHOTPCounter(uuid, tokens, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        return internalApi.seekHOTPCounter(uuid, tokens, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return internalApi.seekHOTPCounter(uuid, tokens);
     }
 
     /**
@@ -284,24 +213,7 @@ public class TFAAPI {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return false;
-        }
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.isRegistered(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        return internalApi.isRegistered(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return internalApi.isRegistered(uuid);
     }
 
     /**
@@ -315,24 +227,7 @@ public class TFAAPI {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return false;
-        }
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return internalApi.delete(uuid, cachedConfig.getAuthy().isPresent() ? cachedConfig.getAuthy().get().getUsers() : null, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        return internalApi.delete(uuid, cachedConfig.getAuthy().isPresent() ? cachedConfig.getAuthy().get().getUsers() : null, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        return internalApi.delete(uuid, ConfigUtil.getCachedConfig().getAuthy().isPresent() ? ConfigUtil.getCachedConfig().getAuthy().get().getUsers() : null);
     }
 
     /**
@@ -368,39 +263,18 @@ public class TFAAPI {
             throw new IllegalArgumentException("token cannot be empty.");
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return Optional.empty();
-        }
-
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            if (cachedConfig.getAuthy().isPresent() && internalApi.hasAuthy(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
-                return internalApi.verifyAuthy(uuid, token, cachedConfig.getAuthy().get().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-            } else if (internalApi.hasTOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
-                return internalApi.verifyTOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-            } else if (internalApi.hasHOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
-                return internalApi.verifyHOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            if (ConfigUtil.getAuthy().isPresent() && internalApi.hasAuthy(uuid)) {
+                return internalApi.verifyAuthy(uuid, token);
+            } else if (internalApi.hasTOTP(uuid)) {
+                return internalApi.verifyTOTP(uuid, token);
+            } else if (internalApi.hasHOTP(uuid)) {
+                return internalApi.verifyHOTP(uuid, token);
             } else {
                 return Optional.empty();
             }
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
+    }
 
-        if (cachedConfig.getAuthy().isPresent() && internalApi.hasAuthy(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
-            return internalApi.verifyAuthy(uuid, token, cachedConfig.getAuthy().get().getTokens(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } else if (internalApi.hasTOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
-            return internalApi.verifyTOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } else if (internalApi.hasHOTP(uuid, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug())) {
-            return internalApi.verifyHOTP(uuid, token, cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
-        } else {
-            return Optional.empty();
-        }
+    public static Logger getLogger() {
+        return logger;
     }
 }

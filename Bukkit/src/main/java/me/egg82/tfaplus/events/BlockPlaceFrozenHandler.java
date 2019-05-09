@@ -1,6 +1,5 @@
 package me.egg82.tfaplus.events;
 
-import java.util.function.Consumer;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.LogUtil;
@@ -10,6 +9,8 @@ import org.bukkit.ChatColor;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.function.Consumer;
 
 public class BlockPlaceFrozenHandler implements Consumer<BlockPlaceEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());

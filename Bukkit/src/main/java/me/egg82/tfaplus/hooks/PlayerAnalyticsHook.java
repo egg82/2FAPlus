@@ -5,9 +5,10 @@ import com.djrapitops.plan.data.element.AnalysisContainer;
 import com.djrapitops.plan.data.element.InspectContainer;
 import com.djrapitops.plan.data.plugin.ContainerSize;
 import com.djrapitops.plan.data.plugin.PluginData;
+import me.egg82.tfaplus.TFAAPI;
+
 import java.util.Collection;
 import java.util.UUID;
-import me.egg82.tfaplus.TFAAPI;
 
 public class PlayerAnalyticsHook implements PluginHook {
     public PlayerAnalyticsHook() { PlanAPI.getInstance().addPluginDataSource(new Data()); }

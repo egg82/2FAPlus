@@ -7,11 +7,6 @@ import co.aikar.taskchain.TaskChainFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.logging.Level;
-
 import me.egg82.tfaplus.commands.HOTPCommand;
 import me.egg82.tfaplus.commands.TFAPlusCommand;
 import me.egg82.tfaplus.core.SQLFetchResult;
@@ -53,6 +48,11 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.logging.Level;
 
 public class TFAPlus {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -153,7 +153,7 @@ public class TFAPlus {
             return;
         }
 
-        workPool.submit(() -> new RedisSubscriber(cachedConfig.getRedisPool(), config.getNode("redis")));
+        workPool.submit(() -> new RedisSubscriber());
         ServiceLocator.register(new RabbitMQReceiver(cachedConfig.getRabbitConnectionFactory()));
     }
 
@@ -172,14 +172,14 @@ public class TFAPlus {
         if (cachedConfig.getSQLType() == SQLType.MySQL) {
             MySQL.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     MySQL.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                         updateSQL();
                     })
             );
         } else if (cachedConfig.getSQLType() == SQLType.SQLite) {
             SQLite.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     SQLite.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                         updateSQL();
                     })
             );
@@ -201,13 +201,13 @@ public class TFAPlus {
         if (cachedConfig.getSQLType() == SQLType.MySQL) {
             MySQL.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     MySQL.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                     })
             );
         } else if (cachedConfig.getSQLType() == SQLType.SQLite) {
             SQLite.createTables(cachedConfig.getSQL(), config.getNode("storage")).thenRun(() ->
                     SQLite.loadInfo(cachedConfig.getSQL(), config.getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"));
+                        Redis.updateFromQueue(v, cachedConfig.getIPTime());
                     })
             );
         }
@@ -240,7 +240,7 @@ public class TFAPlus {
                 }
 
                 if (result != null) {
-                    Redis.updateFromQueue(result, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis")).get();
+                    Redis.updateFromQueue(result, cachedConfig.getIPTime()).get();
                 }
             } catch (ExecutionException ex) {
                 logger.error(ex.getMessage(), ex);

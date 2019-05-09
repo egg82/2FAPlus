@@ -1,6 +1,5 @@
 package me.egg82.tfaplus.events;
 
-import java.util.function.Consumer;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.LogUtil;
@@ -11,6 +10,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.function.Consumer;
 
 public class InventoryMoveItemFrozenHandler implements Consumer<InventoryMoveItemEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());

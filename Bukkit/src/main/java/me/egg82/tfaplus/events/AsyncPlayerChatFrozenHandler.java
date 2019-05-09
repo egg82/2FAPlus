@@ -1,14 +1,6 @@
 package me.egg82.tfaplus.events;
 
 import com.rabbitmq.client.Connection;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
@@ -27,6 +19,15 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -157,13 +158,13 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
     private void setLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
         try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            InternalAPI.setLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), rabbitConnection, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+            InternalAPI.setLogin(uuid, ip);
             return;
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }
 
-        InternalAPI.setLogin(uuid, ip, cachedConfig.getIPTime(), cachedConfig.getRedisPool(), config.getNode("redis"), null, cachedConfig.getSQL(), config.getNode("storage"), cachedConfig.getSQLType(), cachedConfig.getDebug());
+        InternalAPI.setLogin(uuid, ip);
     }
 
     private void kickPlayer(Configuration config, Player player) {

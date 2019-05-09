@@ -1,7 +1,5 @@
 package me.egg82.tfaplus.events;
 
-import java.net.InetAddress;
-import java.util.function.Consumer;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.utils.LogUtil;
@@ -11,6 +9,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.util.function.Consumer;
 
 public class AsyncPlayerPreLoginCacheHandler implements Consumer<AsyncPlayerPreLoginEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
