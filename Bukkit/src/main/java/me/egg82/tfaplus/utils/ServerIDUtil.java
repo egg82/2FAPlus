@@ -10,6 +10,8 @@ import java.util.UUID;
 public class ServerIDUtil {
     private static final Logger logger = LoggerFactory.getLogger(ServerIDUtil.class);
 
+    private ServerIDUtil() {}
+
     public static UUID getID(File idFile) {
         String id;
 
