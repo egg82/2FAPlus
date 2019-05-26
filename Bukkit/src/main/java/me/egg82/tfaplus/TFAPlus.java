@@ -7,6 +7,7 @@ import co.aikar.taskchain.TaskChainFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.io.File;
 import me.egg82.tfaplus.commands.HOTPCommand;
 import me.egg82.tfaplus.commands.TFAPlusCommand;
 import me.egg82.tfaplus.core.SQLFetchResult;
@@ -91,7 +92,7 @@ public class TFAPlus {
     }
 
     public void onEnable() {
-        GameAnalyticsErrorHandler.open(ServerIDUtil.getID(), plugin.getDescription().getVersion(), Bukkit.getVersion());
+        GameAnalyticsErrorHandler.open(ServerIDUtil.getID(new File(plugin.getDataFolder(), "stats-id.txt")), plugin.getDescription().getVersion(), Bukkit.getVersion());
 
         taskFactory = BukkitTaskChainFactory.create(plugin);
         commandManager = new PaperCommandManager(plugin);
