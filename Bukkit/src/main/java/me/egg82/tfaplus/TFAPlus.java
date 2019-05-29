@@ -113,7 +113,7 @@ public class TFAPlus {
                 + ChatColor.YELLOW + "[" + ChatColor.WHITE + events.size() + ChatColor.BLUE + " Events" + ChatColor.YELLOW +  "]"
         );
 
-        checkUpdate();
+        workPool.submit(this::checkUpdate);
     }
 
     public void onDisable() {
@@ -141,7 +141,7 @@ public class TFAPlus {
     }
 
     public void loadServicesExternal() {
-        workPool = Executors.newFixedThreadPool(2, new ThreadFactoryBuilder().setNameFormat("2FAPlus-%d").build());
+        workPool = Executors.newFixedThreadPool(3, new ThreadFactoryBuilder().setNameFormat("2FAPlus-%d").build());
 
         Configuration config;
         CachedConfigValues cachedConfig;
@@ -409,37 +409,30 @@ public class TFAPlus {
                 return;
             }
 
-            if (config.getNode("update", "notify").getBoolean(true)) {
-                try {
-                    plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.AQUA + " has an " + ChatColor.GREEN + "update" + ChatColor.AQUA + " available! New version: " + ChatColor.YELLOW + updater.getLatestVersion().get());
-                } catch (ExecutionException ex) {
-                    logger.error(ex.getMessage(), ex);
-                } catch (InterruptedException ex) {
-                    logger.error(ex.getMessage(), ex);
-                    Thread.currentThread().interrupt();
-                }
+            try {
+                plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.AQUA + " has an " + ChatColor.GREEN + "update" + ChatColor.AQUA + " available! New version: " + ChatColor.YELLOW + updater.getLatestVersion().get());
+            } catch (ExecutionException ex) {
+                logger.error(ex.getMessage(), ex);
+            } catch (InterruptedException ex) {
+                logger.error(ex.getMessage(), ex);
+                Thread.currentThread().interrupt();
             }
         });
+
+        try {
+            Thread.sleep(60L * 60L * 1000L);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+
+        workPool.submit(this::checkUpdate);
     }
 
     private void unloadHooks() {
-        Optional<? extends PluginHook> plan;
-        try {
-            plan = ServiceLocator.getOptional(PlayerAnalyticsHook.class);
-        } catch (InstantiationException | IllegalAccessException ex) {
-            logger.error(ex.getMessage(), ex);
-            plan = Optional.empty();
+        Set<? extends PluginHook> hooks = ServiceLocator.remove(PluginHook.class);
+        for (PluginHook hook : hooks) {
+            hook.cancel();
         }
-        plan.ifPresent(v -> v.cancel());
-
-        Optional<? extends PluginHook> placeholderapi;
-        try {
-            placeholderapi = ServiceLocator.getOptional(PlaceholderAPIHook.class);
-        } catch (InstantiationException | IllegalAccessException ex) {
-            logger.error(ex.getMessage(), ex);
-            placeholderapi = Optional.empty();
-        }
-        placeholderapi.ifPresent(v -> v.cancel());
     }
 
     public void unloadServices() {
