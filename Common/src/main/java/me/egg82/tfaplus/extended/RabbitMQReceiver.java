@@ -200,17 +200,6 @@ public class RabbitMQReceiver {
                 public void handleDelivery(String tag, Envelope envelope, AMQP.BasicProperties properies, byte[] body) throws IOException {
                     String message = new String(body, "UTF-8");
 
-                    CachedConfigValues cachedConfig;
-                    Configuration config;
-
-                    try {
-                        cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                        config = ServiceLocator.get(Configuration.class);
-                    } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-                        logger.error(ex.getMessage(), ex);
-                        return;
-                    }
-
                     // In this case, the message is the "UUID"
                     InternalAPI.delete(message);
                 }

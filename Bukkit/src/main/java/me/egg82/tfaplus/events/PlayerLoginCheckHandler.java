@@ -1,16 +1,14 @@
 package me.egg82.tfaplus.events;
 
-import com.rabbitmq.client.Connection;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.services.InternalAPI;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.LogUtil;
-import me.egg82.tfaplus.utils.RabbitMQUtil;
 import ninja.egg82.service.ServiceLocator;
-import ninja.egg82.service.ServiceNotFoundException;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.event.player.PlayerLoginEvent;
@@ -18,11 +16,8 @@ import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
@@ -40,14 +35,9 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
             return;
         }
 
-        Configuration config;
-        CachedConfigValues cachedConfig;
-
-        try {
-            config = ServiceLocator.get(Configuration.class);
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-        } catch (InstantiationException | IllegalAccessException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
+        Optional<Configuration> config = ConfigUtil.getConfig();
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!config.isPresent() || !cachedConfig.isPresent()) {
             return;
         }
 
@@ -55,30 +45,30 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
             return;
         }
 
-        if (cachedConfig.getDebug()) {
+        if (cachedConfig.get().getDebug()) {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is set to be checked on login.");
         }
 
-        if (cachedConfig.getIgnored().contains(ip) || cachedConfig.getIgnored().contains(event.getPlayer().getUniqueId().toString())) {
+        if (cachedConfig.get().getIgnored().contains(ip) || cachedConfig.get().getIgnored().contains(event.getPlayer().getUniqueId().toString())) {
             return;
         }
 
         if (!api.isRegistered(event.getPlayer().getUniqueId())) {
-            if (cachedConfig.getForceAuth()) {
-                if (cachedConfig.getDebug()) {
+            if (cachedConfig.get().getForceAuth()) {
+                if (cachedConfig.get().getDebug()) {
                     logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is required. Kicking with defined message.");
                 }
-                kickPlayer(config, event);
+                kickPlayer(config.get(), event);
             } else {
-                if (cachedConfig.getDebug()) {
+                if (cachedConfig.get().getDebug()) {
                     logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is not required. Ignoring.");
                 }
             }
             return;
         }
 
-        if (canLogin(config, cachedConfig, event.getPlayer().getUniqueId(), ip)) {
-            if (cachedConfig.getDebug()) {
+        if (InternalAPI.getLogin(event.getPlayer().getUniqueId(), ip, cachedConfig.get().getIPTime())) {
+            if (cachedConfig.get().getDebug()) {
                 logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has verified from this IP recently. Ignoring.");
             }
             return;
@@ -86,7 +76,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
 
         CollectionProvider.getFrozen().put(event.getPlayer().getUniqueId(), 0L);
         Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat."));
-        if (cachedConfig.getDebug()) {
+        if (cachedConfig.get().getDebug()) {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has been sent a verification request.");
         }
     }
@@ -97,16 +87,6 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
         }
 
         return address.getHostAddress();
-    }
-
-    private boolean canLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime());
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        return InternalAPI.getLogin(uuid, ip, cachedConfig.getIPTime());
     }
 
     private void kickPlayer(Configuration config, PlayerLoginEvent event) {

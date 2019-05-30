@@ -2,12 +2,14 @@ package me.egg82.tfaplus.events;
 
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class PlayerPickupArrowFrozenHandler implements Consumer<PlayerPickupArrowEvent> {
@@ -22,17 +24,13 @@ public class PlayerPickupArrowFrozenHandler implements Consumer<PlayerPickupArro
             return;
         }
 
-        CachedConfigValues cachedConfig;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
             event.setCancelled(true); // Assume event cancellation
             return;
         }
 
-        if (cachedConfig.getFreeze().getDrops()) {
+        if (cachedConfig.get().getFreeze().getDrops()) {
             event.setCancelled(true);
         }
     }

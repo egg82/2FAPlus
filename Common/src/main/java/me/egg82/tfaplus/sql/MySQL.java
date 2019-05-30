@@ -21,11 +21,11 @@ public class MySQL {
 
     private MySQL() {}
 
-    public static CompletableFuture<Void> createTables(SQL sql, ConfigurationNode storageConfigNode) {
+    public static CompletableFuture<Boolean> createTables(SQL sql, ConfigurationNode storageConfigNode) {
         String databaseName = storageConfigNode.getNode("data", "database").getString();
         String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
 
-        return CompletableFuture.runAsync(() -> {
+        return CompletableFuture.supplyAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "login';", databaseName);
                 if (query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0) {
@@ -41,6 +41,8 @@ public class MySQL {
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
             }
+        }).thenApplyAsync(v -> {
+
         }).thenRunAsync(() -> {
             try {
                 SQLQueryResult query = sql.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='" + tablePrefix + "authy';", databaseName);

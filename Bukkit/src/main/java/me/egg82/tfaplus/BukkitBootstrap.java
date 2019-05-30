@@ -49,7 +49,7 @@ public class BukkitBootstrap extends JavaPlugin {
 
         try {
             concreteClass = proxiedClassLoader.loadClass("me.egg82.tfaplus.TFAPlus");
-            concrete = concreteClass.getDeclaredConstructor(Plugin.class, ClassLoader.class).newInstance(this, proxiedClassLoader);
+            concrete = concreteClass.getDeclaredConstructor(Plugin.class).newInstance(this);
             concreteClass.getMethod("onLoad").invoke(concrete);
         } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException ex) {
             logger.error(ex.getMessage(), ex);

@@ -2,15 +2,15 @@ package me.egg82.tfaplus.events;
 
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.LogUtil;
-import ninja.egg82.service.ServiceLocator;
-import ninja.egg82.service.ServiceNotFoundException;
 import org.bukkit.ChatColor;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class AsyncPlayerPreLoginCacheHandler implements Consumer<AsyncPlayerPreLoginEvent> {
@@ -26,24 +26,20 @@ public class AsyncPlayerPreLoginCacheHandler implements Consumer<AsyncPlayerPreL
             return;
         }
 
-        CachedConfigValues cachedConfig;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-        } catch (InstantiationException | IllegalAccessException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
             return;
         }
 
-        if (cachedConfig.getIgnored().contains(ip)) {
-            if (cachedConfig.getDebug()) {
+        if (cachedConfig.get().getIgnored().contains(ip)) {
+            if (cachedConfig.get().getDebug()) {
                 logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getUniqueId() + ChatColor.YELLOW + " is using an ignored IP " + ChatColor.WHITE + ip +  ChatColor.YELLOW + ". Ignoring.");
             }
             return;
         }
 
-        if (cachedConfig.getIgnored().contains(event.getUniqueId().toString())) {
-            if (cachedConfig.getDebug()) {
+        if (cachedConfig.get().getIgnored().contains(event.getUniqueId().toString())) {
+            if (cachedConfig.get().getDebug()) {
                 logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getUniqueId() + ChatColor.YELLOW + " is an ignored UUID. Ignoring.");
             }
             return;

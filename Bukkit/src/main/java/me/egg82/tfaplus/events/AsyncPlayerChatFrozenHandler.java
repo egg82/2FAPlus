@@ -1,16 +1,14 @@
 package me.egg82.tfaplus.events;
 
-import com.rabbitmq.client.Connection;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.services.InternalAPI;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.LogUtil;
-import me.egg82.tfaplus.utils.RabbitMQUtil;
 import ninja.egg82.service.ServiceLocator;
-import ninja.egg82.service.ServiceNotFoundException;
 import ninja.egg82.tuples.longs.LongObjectPair;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -20,13 +18,10 @@ import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEvent> {
@@ -100,21 +95,16 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             return;
         }
 
-        CachedConfigValues cachedConfig;
-        Configuration config;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-            config = ServiceLocator.get(Configuration.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
+        Optional<Configuration> config = ConfigUtil.getConfig();
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!config.isPresent() || !cachedConfig.isPresent()) {
             event.setCancelled(true); // Assume event cancellation
             return;
         }
 
         String message = event.getMessage().replaceAll("\\s+", "").trim();
         if (!message.matches("\\d+")) {
-            if (cachedConfig.getFreeze().getChat()) {
+            if (cachedConfig.get().getFreeze().getChat()) {
                 event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "You must first authenticate with your 2FA code before chatting!");
                 event.setCancelled(true);
             }
@@ -139,32 +129,21 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                 return v + 1L;
             });
 
-            if (cachedConfig.getMaxAttempts() <= 0L || attempts < cachedConfig.getMaxAttempts()) {
+            if (cachedConfig.get().getMaxAttempts() <= 0L || attempts < cachedConfig.get().getMaxAttempts()) {
                 event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
             } else {
                 if (event.isAsynchronous()) {
-                    Bukkit.getScheduler().runTask(plugin, () -> kickPlayer(config, event.getPlayer()));
+                    Bukkit.getScheduler().runTask(plugin, () -> kickPlayer(config.get(), event.getPlayer()));
                 } else {
-                    kickPlayer(config, event.getPlayer());
+                    kickPlayer(config.get(), event.getPlayer());
                 }
             }
             return;
         }
 
-        setLogin(config, cachedConfig, event.getPlayer().getUniqueId(), getIp(event.getPlayer()));
+        InternalAPI.setLogin(event.getPlayer().getUniqueId(), getIp(event.getPlayer()));
         CollectionProvider.getFrozen().remove(event.getPlayer().getUniqueId());
         event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your 2FA code was successfully verified!");
-    }
-
-    private void setLogin(Configuration config, CachedConfigValues cachedConfig, UUID uuid, String ip) {
-        try (Connection rabbitConnection = RabbitMQUtil.getConnection(cachedConfig.getRabbitConnectionFactory())) {
-            InternalAPI.setLogin(uuid, ip);
-            return;
-        } catch (IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        }
-
-        InternalAPI.setLogin(uuid, ip);
     }
 
     private void kickPlayer(Configuration config, Player player) {

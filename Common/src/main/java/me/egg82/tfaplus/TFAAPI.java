@@ -6,8 +6,6 @@ import me.egg82.tfaplus.services.InternalAPI;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import ninja.egg82.service.ServiceLocator;
-import ninja.egg82.service.ServiceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,22 +28,19 @@ public class TFAAPI {
      * Returns the current time in millis according to the SQL database server
      *
      * @return The current time, in millis, from the database server
+     * @throws APIException if there was an error while attempting to get the time
      */
-    public long getCurrentSQLTime() {
-        CachedConfigValues cachedConfig;
-
-        try {
-            cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-        } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-            logger.error(ex.getMessage(), ex);
-            return -1L;
+    public long getCurrentSQLTime() throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
         }
 
         try {
-            if (cachedConfig.getSQLType() == SQLType.MySQL) {
-                return MySQL.getCurrentTime(cachedConfig.getSQL()).get();
-            } else if (cachedConfig.getSQLType() == SQLType.SQLite) {
-                return SQLite.getCurrentTime(cachedConfig.getSQL()).get();
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                return MySQL.getCurrentTime(cachedConfig.get().getSQL()).get();
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                return SQLite.getCurrentTime(cachedConfig.get().getSQL()).get();
             }
         } catch (ExecutionException ex) {
             logger.error(ex.getMessage(), ex);
@@ -54,7 +49,7 @@ public class TFAAPI {
             Thread.currentThread().interrupt();
         }
 
-        return -1L;
+        throw new APIException(true, "Could not get time from database.");
     }
 
     /**
@@ -63,9 +58,9 @@ public class TFAAPI {
      * @param uuid The player UUID
      * @param email The user's e-mail address
      * @param phone The user's phone number
-     * @return Whether or not the registration was successful
+     * @throws APIException if there was an error while attempting to register the player
      */
-    public boolean registerAuthy(UUID uuid, String email, String phone) { return registerAuthy(uuid, email, phone, "1"); }
+    public void registerAuthy(UUID uuid, String email, String phone) throws APIException { registerAuthy(uuid, email, phone, "1"); }
 
     /**
      * Register a new Authy user from an existing player
@@ -74,9 +69,9 @@ public class TFAAPI {
      * @param email The user's e-mail address
      * @param phone The user's phone number
      * @param countryCode The user's phone numbers' country code
-     * @return Whether or not the registration was successful
+     * @throws APIException if there was an error while attempting to register the player
      */
-    public boolean registerAuthy(UUID uuid, String email, String phone, String countryCode) {
+    public void registerAuthy(UUID uuid, String email, String phone, String countryCode) throws APIException {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
@@ -99,12 +94,17 @@ public class TFAAPI {
             throw new IllegalArgumentException("countryCode cannot be empty.");
         }
 
-        if (!ConfigUtil.getCachedConfig().getAuthy().isPresent()) {
-            logger.error("Authy is not present (missing API key in config?)");
-            return false;
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
         }
 
-        return internalApi.registerAuthy(uuid, email, phone, countryCode);
+        if (!cachedConfig.get().getAuthy().isPresent()) {
+            logger.error("Authy is not present (missing API key in config?)");
+            throw new APIException(true, "Authy is not available.");
+        }
+
+        internalApi.registerAuthy(uuid, email, phone, countryCode);
     }
 
     /**
@@ -112,9 +112,10 @@ public class TFAAPI {
      *
      * @param uuid The player UUID
      * @param codeLength The length of the TOTP code (eg. 6 would generate a 6-digit code)
-     * @return A base32-encoded private key, or null if error
+     * @return A base32-encoded private key
+     * @throws APIException if there was an error while attempting to register the player
      */
-    public String registerTOTP(UUID uuid, long codeLength) {
+    public String registerTOTP(UUID uuid, long codeLength) throws APIException {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
@@ -130,9 +131,10 @@ public class TFAAPI {
      *
      * @param uuid The player UUID
      * @param codeLength The length of the HOTP code (eg. 6 would generate a 6-digit code)
-     * @return A base32-encoded private key, or null if error
+     * @return A base32-encoded private key
+     * @throws APIException if there was an error while attempting to register the player
      */
-    public String registerHOTP(UUID uuid, long codeLength) { return registerHOTP(uuid, codeLength, 0L); }
+    public String registerHOTP(UUID uuid, long codeLength) throws APIException { return registerHOTP(uuid, codeLength, 0L); }
 
     /**
      * Register a new HOTP user from an existing player
@@ -140,9 +142,10 @@ public class TFAAPI {
      * @param uuid The player UUID
      * @param codeLength The length of the HOTP code (eg. 6 would generate a 6-digit code)
      * @param initialCounterValue The initial value of the HOTP counter
-     * @return A base32-encoded private key, or null if error
+     * @return A base32-encoded private key
+     * @throws APIException if there was an error while attempting to register the player
      */
-    public String registerHOTP(UUID uuid, long codeLength, long initialCounterValue) {
+    public String registerHOTP(UUID uuid, long codeLength, long initialCounterValue) throws APIException {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
@@ -166,14 +169,14 @@ public class TFAAPI {
      *
      * @param uuid The player UUID
      * @param tokens The token sequence provided by the user
-     * @return Whether or not the seek/re-set was successful.
+     * @throws APIException if there was an error while attempting to seek the player's HOTP counter
      */
-    public boolean seekHOTPCounter(UUID uuid, Collection<String> tokens) {
+    public void seekHOTPCounter(UUID uuid, Collection<String> tokens) throws APIException {
         if (tokens == null) {
             throw new IllegalArgumentException("tokens cannot be null.");
         }
 
-        return seekHOTPCounter(uuid, tokens.toArray(new String[0]));
+        seekHOTPCounter(uuid, tokens.toArray(new String[0]));
     }
 
     /**
@@ -186,9 +189,9 @@ public class TFAAPI {
      *
      * @param uuid The player UUID
      * @param tokens The token sequence provided by the user
-     * @return Whether or not the seek/re-set was successful.
+     * @throws APIException if there was an error while attempting to seek the player's HOTP counter
      */
-    public boolean seekHOTPCounter(UUID uuid, String[] tokens) {
+    public void seekHOTPCounter(UUID uuid, String[] tokens) throws APIException {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
@@ -199,7 +202,7 @@ public class TFAAPI {
             throw new IllegalArgumentException("tokens length cannot be <= 1");
         }
 
-        return internalApi.seekHOTPCounter(uuid, tokens);
+        internalApi.seekHOTPCounter(uuid, tokens);
     }
 
     /**
@@ -221,13 +224,19 @@ public class TFAAPI {
      *
      * @param uuid The player UUID
      * @return Whether or not the deletion was successful
+     * @throws APIException if there was an error while attempting to delete the player
      */
-    public boolean delete(UUID uuid) {
+    public void delete(UUID uuid) throws APIException {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
 
-        return internalApi.delete(uuid, ConfigUtil.getCachedConfig().getAuthy().isPresent() ? ConfigUtil.getCachedConfig().getAuthy().get().getUsers() : null);
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        internalApi.delete(uuid, cachedConfig.get().getAuthy().isPresent() ? cachedConfig.get().getAuthy().get().getUsers() : null);
     }
 
     /**
@@ -250,9 +259,10 @@ public class TFAAPI {
      *
      * @param uuid The player UUID
      * @param token 2FA token to verify against
-     * @return An optional boolean value. Empty = error, true = success, false = failure
+     * @return A boolean value. True = success, false = failure
+     * @throws APIException if there was an error while attempting to verify the player
      */
-    public Optional<Boolean> verify(UUID uuid, String token) {
+    public boolean verify(UUID uuid, String token) throws APIException {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
@@ -263,15 +273,20 @@ public class TFAAPI {
             throw new IllegalArgumentException("token cannot be empty.");
         }
 
-            if (ConfigUtil.getAuthy().isPresent() && internalApi.hasAuthy(uuid)) {
-                return internalApi.verifyAuthy(uuid, token);
-            } else if (internalApi.hasTOTP(uuid)) {
-                return internalApi.verifyTOTP(uuid, token);
-            } else if (internalApi.hasHOTP(uuid)) {
-                return internalApi.verifyHOTP(uuid, token);
-            } else {
-                return Optional.empty();
-            }
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        if (cachedConfig.get().getAuthy().isPresent() && internalApi.hasAuthy(uuid)) {
+            return internalApi.verifyAuthy(uuid, token);
+        } else if (internalApi.hasTOTP(uuid)) {
+            return internalApi.verifyTOTP(uuid, token);
+        } else if (internalApi.hasHOTP(uuid)) {
+            return internalApi.verifyHOTP(uuid, token);
+        }
+
+        throw new APIException(false, "User does not have 2FA enabled.");
     }
 
     public static Logger getLogger() {

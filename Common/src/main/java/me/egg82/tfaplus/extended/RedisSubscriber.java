@@ -9,8 +9,6 @@ import me.egg82.tfaplus.services.Redis;
 import me.egg82.tfaplus.utils.RedisUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.analytics.utils.JSONUtil;
-import ninja.egg82.service.ServiceLocator;
-import ninja.egg82.service.ServiceNotFoundException;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
@@ -61,11 +59,8 @@ public class RedisSubscriber {
                         return;
                     }
 
-                    CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                    Configuration config = ServiceLocator.get(Configuration.class);
-
                     InternalAPI.add(new LoginData(uuid, ip, created));
-                } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                } catch (ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-authy")) {
@@ -80,11 +75,8 @@ public class RedisSubscriber {
                         return;
                     }
 
-                    CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                    Configuration config = ServiceLocator.get(Configuration.class);
-
                     InternalAPI.add(new AuthyData(uuid, i));
-                } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                } catch (ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-totp")) {
@@ -100,11 +92,8 @@ public class RedisSubscriber {
                         return;
                     }
 
-                    CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                    Configuration config = ServiceLocator.get(Configuration.class);
-
                     InternalAPI.add(new TOTPData(uuid, length, key));
-                } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                } catch (ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-hotp")) {
@@ -121,25 +110,11 @@ public class RedisSubscriber {
                         return;
                     }
 
-                    CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                    Configuration config = ServiceLocator.get(Configuration.class);
-
                     InternalAPI.add(new HOTPData(uuid, length, counter, key));
-                } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                } catch (ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-delete")) {
-                CachedConfigValues cachedConfig;
-                Configuration config;
-
-                try {
-                    cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                    config = ServiceLocator.get(Configuration.class);
-                } catch (IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
-                    logger.error(ex.getMessage(), ex);
-                    return;
-                }
-
                 // In this case, the message is the "UUID"
                 InternalAPI.delete(message);
             }

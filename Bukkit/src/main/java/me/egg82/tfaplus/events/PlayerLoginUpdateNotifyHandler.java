@@ -1,6 +1,7 @@
 package me.egg82.tfaplus.events;
 
 import me.egg82.tfaplus.extended.Configuration;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.LogUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
@@ -12,6 +13,7 @@ import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
@@ -27,18 +29,21 @@ public class PlayerLoginUpdateNotifyHandler implements Consumer<PlayerLoginEvent
             return;
         }
 
-        Configuration config;
+        Optional<Configuration> config = ConfigUtil.getConfig();
+        if (!config.isPresent()) {
+            return;
+        }
+
         SpigotUpdater updater;
 
         try {
-            config = ServiceLocator.get(Configuration.class);
             updater = ServiceLocator.get(SpigotUpdater.class);
         } catch (InstantiationException | IllegalAccessException | ServiceNotFoundException ex) {
             logger.error(ex.getMessage(), ex);
             return;
         }
 
-        if (!config.getNode("update", "check").getBoolean(true)) {
+        if (!config.get().getNode("update", "check").getBoolean(true)) {
             return;
         }
 
@@ -47,7 +52,7 @@ public class PlayerLoginUpdateNotifyHandler implements Consumer<PlayerLoginEvent
                 return;
             }
 
-            if (config.getNode("update", "notify").getBoolean(true)) {
+            if (config.get().getNode("update", "notify").getBoolean(true)) {
                 try {
                     String message = LogUtil.getHeading() + ChatColor.AQUA + " (Bukkit) has an " + ChatColor.GREEN + "update" + ChatColor.AQUA + " available! New version: " + ChatColor.YELLOW + updater.getLatestVersion().get();
                     Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(message));

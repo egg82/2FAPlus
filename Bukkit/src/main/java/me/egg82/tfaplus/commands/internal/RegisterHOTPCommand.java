@@ -5,10 +5,9 @@ import co.aikar.taskchain.TaskChainAbortAction;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.services.lookup.PlayerLookup;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.LogUtil;
 import me.egg82.tfaplus.utils.MapUtil;
-import ninja.egg82.service.ServiceLocator;
-import ninja.egg82.service.ServiceNotFoundException;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -17,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 
 public class RegisterHOTPCommand implements Runnable {
@@ -48,17 +48,12 @@ public class RegisterHOTPCommand implements Runnable {
                     }
                 })
                 .<String>asyncCallback((v, f) -> {
-                    Configuration config;
-
-                    try {
-                        config = ServiceLocator.get(Configuration.class);
-                    } catch (InstantiationException | IllegalAccessException | ServiceNotFoundException ex) {
-                        logger.error(ex.getMessage(), ex);
-                        f.accept(null);
+                    Optional<Configuration> config = ConfigUtil.getConfig();
+                    if (!config.isPresent()) {
                         return;
                     }
 
-                    f.accept(api.registerHOTP(v, config.getNode("otp", "digits").getLong(), initialCounterValue));
+                    f.accept(api.registerHOTP(v, config.get().getNode("otp", "digits").getLong(), initialCounterValue));
                 })
                 .syncLast(v -> {
                     if (v == null) {
@@ -66,12 +61,8 @@ public class RegisterHOTPCommand implements Runnable {
                         return;
                     }
 
-                    Configuration config;
-
-                    try {
-                        config = ServiceLocator.get(Configuration.class);
-                    } catch (InstantiationException | IllegalAccessException | ServiceNotFoundException ex) {
-                        logger.error(ex.getMessage(), ex);
+                    Optional<Configuration> config = ConfigUtil.getConfig();
+                    if (!config.isPresent()) {
                         return;
                     }
 
@@ -82,7 +73,7 @@ public class RegisterHOTPCommand implements Runnable {
                         sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Their 2FA account key is " + ChatColor.WHITE + v);
                         if (sender instanceof Player) {
                             sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You have been provided a scannable QR code for your convenience.");
-                            MapUtil.sendHOTPQRCode((Player) sender, v, config.getNode("otp", "issuer").getString(""), config.getNode("otp", "digits").getLong(), initialCounterValue);
+                            MapUtil.sendHOTPQRCode((Player) sender, v, config.get().getNode("otp", "issuer").getString(""), config.get().getNode("otp", "digits").getLong(), initialCounterValue);
                         }
                         sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please remember to keep this information PRIVATE!");
                     }
@@ -90,7 +81,7 @@ public class RegisterHOTPCommand implements Runnable {
                     if (player != null) {
                         player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Your 2FA account key is " + ChatColor.WHITE + v);
                         player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You have been provided a scannable QR code for your convenience.");
-                        MapUtil.sendHOTPQRCode(player, v, config.getNode("otp", "issuer").getString(""), config.getNode("otp", "digits").getLong(), initialCounterValue);
+                        MapUtil.sendHOTPQRCode(player, v, config.get().getNode("otp", "issuer").getString(""), config.get().getNode("otp", "digits").getLong(), initialCounterValue);
                         player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please remember to keep this key and QR code PRIVATE!");
                     }
                 })

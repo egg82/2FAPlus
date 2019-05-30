@@ -4,7 +4,6 @@ import co.aikar.commands.BaseCommand;
 import co.aikar.commands.CommandHelp;
 import co.aikar.commands.annotation.*;
 import co.aikar.taskchain.TaskChainFactory;
-import me.egg82.tfaplus.TFAPlus;
 import me.egg82.tfaplus.commands.internal.*;
 import me.egg82.tfaplus.utils.LogUtil;
 import org.bukkit.Bukkit;
@@ -14,12 +13,10 @@ import org.bukkit.plugin.Plugin;
 
 @CommandAlias("2faplus|tfaplus|2fa|tfa")
 public class TFAPlusCommand extends BaseCommand {
-    private final TFAPlus concrete;
     private final Plugin plugin;
     private final TaskChainFactory taskFactory;
 
-    public TFAPlusCommand(TFAPlus concrete, Plugin plugin, TaskChainFactory taskFactory) {
-        this.concrete = concrete;
+    public TFAPlusCommand(Plugin plugin, TaskChainFactory taskFactory) {
         this.plugin = plugin;
         this.taskFactory = taskFactory;
     }
@@ -28,7 +25,7 @@ public class TFAPlusCommand extends BaseCommand {
     @CommandPermission("2faplus.admin")
     @Description("Reloads the plugin.")
     public void onReload(CommandSender sender) {
-        new ReloadCommand(concrete, plugin, taskFactory.newChain(), sender).run();
+        new ReloadCommand(plugin, taskFactory.newChain(), sender).run();
     }
 
     @Subcommand("register|create|add authy")
