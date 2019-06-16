@@ -42,15 +42,21 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
         }
 
         if (!event.getPlayer().hasPermission("2faplus.check")) {
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " does not have check perm node. Ignoring.");
+            }
+            return;
+        }
+
+        if (cachedConfig.get().getIgnored().contains(ip) || cachedConfig.get().getIgnored().contains(event.getPlayer().getUniqueId().toString())) {
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has bypass in config. Ignoring.");
+            }
             return;
         }
 
         if (ConfigUtil.getDebugOrFalse()) {
-            logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is set to be checked on login.");
-        }
-
-        if (cachedConfig.get().getIgnored().contains(ip) || cachedConfig.get().getIgnored().contains(event.getPlayer().getUniqueId().toString())) {
-            return;
+            logger.info(LogUtil.getHeading() + ChatColor.YELLOW + "Checking " + ChatColor.WHITE + event.getPlayer().getName());
         }
 
         try {

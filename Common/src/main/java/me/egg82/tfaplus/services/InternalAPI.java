@@ -197,7 +197,7 @@ public class InternalAPI {
             throw new APIException(true, ex);
         }
 
-        keyGen.init(512);
+        keyGen.init(80);
         SecretKey key = keyGen.generateKey();
 
         // Update SQL
@@ -247,7 +247,7 @@ public class InternalAPI {
             throw new APIException(true, ex);
         }
 
-        keyGen.init(512);
+        keyGen.init(80);
         SecretKey key = keyGen.generateKey();
 
         // Update SQL
@@ -767,12 +767,18 @@ public class InternalAPI {
                     id = authyExpensive(uuid);
                     if (id.isPresent()) {
                         authyCache.put(uuid, id.get());
+                        if (ConfigUtil.getDebugOrFalse()) {
+                            logger.info("Got Authy status for " + uuid + ": " + true);
+                        }
                         return true;
                     }
                 }
             }
         }
 
+        if (ConfigUtil.getDebugOrFalse()) {
+            logger.info("Got Authy status for " + uuid + ": " + id.isPresent());
+        }
         return id.isPresent();
     }
 
@@ -794,12 +800,18 @@ public class InternalAPI {
                     data = totpExpensive(uuid);
                     if (data.isPresent()) {
                         totpCache.put(uuid, data.get());
+                        if (ConfigUtil.getDebugOrFalse()) {
+                            logger.info("Got TOTP status for " + uuid + ": " + true);
+                        }
                         return true;
                     }
                 }
             }
         }
 
+        if (ConfigUtil.getDebugOrFalse()) {
+            logger.info("Got TOTP status for " + uuid + ": " + data.isPresent());
+        }
         return data.isPresent();
     }
 
@@ -821,12 +833,18 @@ public class InternalAPI {
                     data = hotpExpensive(uuid);
                     if (data.isPresent()) {
                         hotpCache.put(uuid, data.get());
+                        if (ConfigUtil.getDebugOrFalse()) {
+                            logger.info("Got HOTP status for " + uuid + ": " + true);
+                        }
                         return true;
                     }
                 }
             }
         }
 
+        if (ConfigUtil.getDebugOrFalse()) {
+            logger.info("Got HOTP status for " + uuid + ": " + data.isPresent());
+        }
         return data.isPresent();
     }
 
