@@ -261,10 +261,10 @@ public class ConfigurationFileUtil {
 
         HikariConfig hikariConfig = new HikariConfig();
         if (type == SQLType.MySQL) {
-            hikariConfig.setJdbcUrl("jdbc:mysql://" + storageConfigNode.getNode("data", "address").getString("127.0.0.1:3306") + "/" + storageConfigNode.getNode("data", "database").getString("avpn"));
+            hikariConfig.setJdbcUrl("jdbc:mysql://" + storageConfigNode.getNode("data", "address").getString("127.0.0.1:3306") + "/" + storageConfigNode.getNode("data", "database").getString("2faplus"));
             hikariConfig.setConnectionTestQuery("SELECT 1;");
         } else if (type == SQLType.SQLite) {
-            hikariConfig.setJdbcUrl("jdbc:sqlite:" + new File(plugin.getDataFolder(), storageConfigNode.getNode("data", "database").getString("avpn") + ".db").getAbsolutePath());
+            hikariConfig.setJdbcUrl("jdbc:sqlite:" + new File(plugin.getDataFolder(), storageConfigNode.getNode("data", "database").getString("2faplus") + ".db").getAbsolutePath());
             hikariConfig.setConnectionTestQuery("SELECT 1;");
         }
         hikariConfig.setUsername(storageConfigNode.getNode("data", "username").getString(""));

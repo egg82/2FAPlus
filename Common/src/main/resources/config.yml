@@ -10,10 +10,10 @@ storage:
   data:
     # Address and port of the remote database (if applicable)
     address: '127.0.0.1:3306'
-    # The name of the database AltFinder will store data in
+    # The name of the database 2FA+ will store data in
     # If you're using remote options, this must be created beforehand
     database: '2faplus'
-    # Table prefix for all AltFinder tables
+    # Table prefix for all 2FA+ tables
     prefix: '2faplus_'
     # Database credentials (if applicable)
     username: ''
@@ -23,7 +23,7 @@ storage:
 
     # MongoDB options- obviously don't need to worry about these if not using MongoDB ;)
     mongodb:
-      # Connection prefix for all AltFinder connections
+      # Connection prefix for all 2FA+ connections
       collection-prefix: ''
       # MongoDB ClientConnectionURI
       connection-uri: ''

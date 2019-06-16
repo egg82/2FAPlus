@@ -183,6 +183,14 @@ public class BukkitBootstrap extends JavaPlugin {
                 .addRepository("https://nexus.egg82.me/repository/maven-central/");
         buildInject(commonsLang3, jarsDir, classLoader, "Apache Commons (Lang 3)");
 
+        Artifact.Builder zxingJavase = Artifact.builder("com.google.zxing", "javase", "3.4.0", cacheDir)
+                .addRepository("https://nexus.egg82.me/repository/maven-central/");
+        buildInject(zxingJavase, jarsDir, classLoader, "ZXing", 1);
+
+        Artifact.Builder javaOtp = Artifact.builder("com.eatthepath", "java-otp", "0.1.0", cacheDir)
+                .addRepository("https://nexus.egg82.me/repository/maven-central/");
+        buildInject(javaOtp, jarsDir, classLoader, "OTP");
+
         printLatest("SQLite");
         Artifact.Builder sqlite = Artifact.builder("org.xerial", "sqlite-jdbc", "latest", cacheDir)
                 .addRepository("https://nexus.egg82.me/repository/maven-central/");
@@ -194,6 +202,10 @@ public class BukkitBootstrap extends JavaPlugin {
         buildInject(mysql, jarsDir, classLoader, "MySQL", 1);
 
         // Global
+
+        Artifact.Builder authyJava = Artifact.builder("com.authy", "authy-java", "1.5.0", cacheDir)
+                .addRepository("https://nexus.egg82.me/repository/maven-central/");
+        buildInject(authyJava, jarsDir, classLoader, "Authy", 1);
 
         Artifact.Builder caffeine = Artifact.builder("com.github.ben-manes.caffeine", "caffeine", "2.7.0", cacheDir)
                 .addRepository("https://nexus.egg82.me/repository/maven-central/");
@@ -254,6 +266,10 @@ public class BukkitBootstrap extends JavaPlugin {
         Artifact.Builder commonsValidator = Artifact.builder("commons-validator", "commons-validator", "1.6", cacheDir)
                 .addRepository("https://nexus.egg82.me/repository/maven-central/");
         buildInject(commonsValidator, jarsDir, classLoader, "Apache Commons Validator", 1);
+
+        Artifact.Builder commonsCodec = Artifact.builder("commons-codec", "commons-codec", "1.12", cacheDir)
+                .addRepository("https://nexus.egg82.me/repository/maven-central/");
+        buildInject(commonsCodec, jarsDir, classLoader, "Apache Commons Codec");
 
         Artifact.Builder jedis = Artifact.builder("redis.clients", "jedis", "3.0.1", cacheDir)
                 .addRepository("https://nexus.egg82.me/repository/maven-central/");

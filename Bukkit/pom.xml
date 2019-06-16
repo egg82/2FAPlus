@@ -33,22 +33,22 @@
                     <relocations>
                         <relocation>
                             <pattern>org.bstats</pattern>
-                            <shadedPattern>me.egg82.antivpn.external.org.bstats</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.org.bstats</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>ninja.egg82.maven</pattern>
-                            <shadedPattern>me.egg82.antivpn.external.ninja.egg82.maven</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.ninja.egg82.maven</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>ninja.egg82.services</pattern>
-                            <shadedPattern>me.egg82.antivpn.external.ninja.egg82.services</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.ninja.egg82.services</shadedPattern>
                             <includes>
                                 <include>ninja.egg82.services.ProxiedURLClassLoader*</include>
                             </includes>
                         </relocation>
                         <relocation>
                             <pattern>ninja.egg82.utils</pattern>
-                            <shadedPattern>me.egg82.antivpn.external.ninja.egg82.utils</shadedPattern>
+                            <shadedPattern>me.egg82.tfaplus.external.ninja.egg82.utils</shadedPattern>
                             <includes>
                                 <include>ninja.egg82.utils.DocumentUtil</include>
                                 <include>ninja.egg82.utils.InjectUtil</include>
@@ -57,6 +57,11 @@
                                 <include>ninja.egg82.utils.MavenUtil</include>
                                 <include>ninja.egg82.utils.XMLUtil</include>
                             </includes>
+                        </relocation>
+                        <!-- temporary until fastutil-lite updates -->
+                        <relocation>
+                            <pattern>it.unimi.dsi.fastutil</pattern>
+                            <shadedPattern>me.egg82.tfaplus.external.it.unimi.dsi.fastutil</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>
@@ -85,11 +90,16 @@
 
                                         <!-- dep-injected -->
                                         <!-- mvn dependency:tree -->
+                                        <exclude>com/authy/**</exclude>
+                                        <exclude>com/beust/jcommander/**</exclude> <!-- included with zxing-javase -->
+                                        <exclude>com/eatthepath/otp/**</exclude>
                                         <exclude>com/github/benmanes/caffeine/**</exclude>
+                                        <exclude>com/github/jaiimageio/**</exclude> <!-- included with zxing-javase -->
                                         <exclude>com/google/common/**</exclude> <!-- included with many things -->
                                         <exclude>com/google/errorprone/annotations/**</exclude> <!-- included with guava -->
                                         <exclude>com/google/j2objc/annotations/**</exclude> <!-- included with guava -->
                                         <exclude>com/google/thirdparty/publicsuffix/**</exclude> <!-- included with guava -->
+                                        <exclude>com/google/zxing/**</exclude>
                                         <exclude>com/googlecode/concurrentlinkedhashmap/**</exclude>
                                         <exclude>com/rabbitmq/**</exclude>
                                         <exclude>com/zaxxer/hikari/**</exclude> <!-- included with easy-sql -->
@@ -105,6 +115,7 @@
                                         <exclude>ninja/egg82/tuples/**</exclude>
                                         <exclude>ninja/leaping/configurate/**</exclude>
                                         <exclude>org/apache/commons/beanutils/**</exclude> <!-- included with validator -->
+                                        <exclude>org/apache/commons/codec/**</exclude>
                                         <exclude>org/apache/commons/collections/**</exclude> <!-- included with validator -->
                                         <exclude>org/apache/commons/digester/**</exclude> <!-- included with validator -->
                                         <exclude>org/apache/commons/lang3/**</exclude> <!-- included with collections -->
@@ -113,6 +124,7 @@
                                         <exclude>org/apache/commons/validator/**</exclude>
                                         <exclude>org/checkerframework/**</exclude> <!-- included with configurate-core -->
                                         <exclude>org/codehaus/mojo/animal_sniffer/**</exclude> <!-- included with guava -->
+                                        <exclude>org/json/**</exclude> <!-- included with authy-java -->
                                         <exclude>org/json/simple/**</exclude> <!-- included with gameanalytics-api -->
                                         <exclude>org/reflections/**</exclude> <!-- included with reflection-utils -->
                                         <exclude>redis/clients/jedis/**</exclude>
@@ -267,13 +279,8 @@
 
         <dependency>
             <groupId>com.google.zxing</groupId>
-            <artifactId>core</artifactId>
-            <version>3.3.3</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.zxing</groupId>
             <artifactId>javase</artifactId>
-            <version>3.3.3</version>
+            <version>3.4.0</version>
         </dependency>
 
         <dependency>

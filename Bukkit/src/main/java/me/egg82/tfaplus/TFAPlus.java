@@ -69,7 +69,7 @@ public class TFAPlus {
     public void onLoad() {
         if (!Bukkit.getName().equals("Paper") && !Bukkit.getName().equals("PaperSpigot")) {
             log(Level.INFO, ChatColor.AQUA + "====================================");
-            log(Level.INFO, ChatColor.YELLOW + "2FAPlus runs better on Paper!");
+            log(Level.INFO, ChatColor.YELLOW + "2FA+ runs better on Paper!");
             log(Level.INFO, ChatColor.YELLOW + "https://whypaper.emc.gs/");
             log(Level.INFO, ChatColor.AQUA + "====================================");
         }
