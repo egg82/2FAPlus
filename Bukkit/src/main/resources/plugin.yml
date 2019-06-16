@@ -3,6 +3,6 @@ prefix: 2FA+
 main: me.egg82.tfaplus.BukkitBootstrap
 version: 2.2.11
 author: egg82
-api-version: 1.14
+api-version: 1.13
 description: Simple 2FA plugin for your Minecraft server.
 softdepend: [Plan, PlaceholderAPI]
