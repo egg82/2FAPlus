@@ -6,13 +6,12 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import me.egg82.tfaplus.extended.ServiceKeys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.awt.image.BufferedImage;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import me.egg82.tfaplus.extended.ServiceKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Largely taken from SecureMyAccount

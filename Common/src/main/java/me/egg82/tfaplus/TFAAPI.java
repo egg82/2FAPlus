@@ -145,7 +145,7 @@ public class TFAAPI {
         InternalAPI.delete(uuid);
     }
 
-    public boolean isVerified(UUID uuid, boolean refresh) throws APIException {
+    public boolean isVerified(UUID uuid, boolean refresh) {
         if (uuid == null) {
             throw new IllegalArgumentException("uuid cannot be null.");
         }

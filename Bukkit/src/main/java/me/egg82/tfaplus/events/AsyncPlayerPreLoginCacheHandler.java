@@ -1,5 +1,9 @@
 package me.egg82.tfaplus.events;
 
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.function.Consumer;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.utils.ConfigUtil;
@@ -8,10 +12,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.function.Consumer;
 
 public class AsyncPlayerPreLoginCacheHandler implements Consumer<AsyncPlayerPreLoginEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -32,20 +32,24 @@ public class AsyncPlayerPreLoginCacheHandler implements Consumer<AsyncPlayerPreL
         }
 
         if (cachedConfig.get().getIgnored().contains(ip)) {
-            if (cachedConfig.get().getDebug()) {
+            if (ConfigUtil.getDebugOrFalse()) {
                 logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getUniqueId() + ChatColor.YELLOW + " is using an ignored IP " + ChatColor.WHITE + ip +  ChatColor.YELLOW + ". Ignoring.");
             }
             return;
         }
 
         if (cachedConfig.get().getIgnored().contains(event.getUniqueId().toString())) {
-            if (cachedConfig.get().getDebug()) {
+            if (ConfigUtil.getDebugOrFalse()) {
                 logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getUniqueId() + ChatColor.YELLOW + " is an ignored UUID. Ignoring.");
             }
             return;
         }
 
-        api.isRegistered(event.getUniqueId()); // Calling this will cache the player data internally, even if the value is unused
+        try {
+            api.isRegistered(event.getUniqueId()); // Calling this will cache the player data internally, even if the value is unused
+        } catch (APIException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
     }
 
     private String getIp(InetAddress address) {

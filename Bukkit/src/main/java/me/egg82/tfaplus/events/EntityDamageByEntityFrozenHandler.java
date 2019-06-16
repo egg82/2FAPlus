@@ -1,5 +1,7 @@
 package me.egg82.tfaplus.events;
 
+import java.util.Optional;
+import java.util.function.Consumer;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.ConfigUtil;
@@ -9,9 +11,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
-import java.util.function.Consumer;
 
 public class EntityDamageByEntityFrozenHandler implements Consumer<EntityDamageByEntityEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());

@@ -1,5 +1,9 @@
 package me.egg82.tfaplus.events;
 
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.function.Consumer;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
@@ -15,10 +19,6 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.function.Consumer;
 
 public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -45,7 +45,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
             return;
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is set to be checked on login.");
         }
 
@@ -53,30 +53,42 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
             return;
         }
 
-        if (!api.isRegistered(event.getPlayer().getUniqueId())) {
+        try {
+            if (!api.isRegistered(event.getPlayer().getUniqueId())) {
+                if (cachedConfig.get().getForceAuth()) {
+                    if (ConfigUtil.getDebugOrFalse()) {
+                        logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is required. Kicking with defined message.");
+                    }
+                    kickPlayer(config.get(), event);
+                } else {
+                    if (ConfigUtil.getDebugOrFalse()) {
+                        logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is not required. Ignoring.");
+                    }
+                }
+                return;
+            }
+        } catch (APIException ex) {
+            logger.error(ex.getMessage(), ex);
             if (cachedConfig.get().getForceAuth()) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is required. Kicking with defined message.");
-                }
-                kickPlayer(config.get(), event);
-            } else {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " is not registered, and registration is not required. Ignoring.");
-                }
+                kickPlayer(config.get(), event); // Kick on exception
             }
             return;
         }
 
-        if (InternalAPI.getLogin(event.getPlayer().getUniqueId(), ip, cachedConfig.get().getIPTime())) {
-            if (cachedConfig.get().getDebug()) {
-                logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has verified from this IP recently. Ignoring.");
+        try {
+            if (InternalAPI.getLogin(event.getPlayer().getUniqueId(), ip)) {
+                if (ConfigUtil.getDebugOrFalse()) {
+                    logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has verified from this IP recently. Ignoring.");
+                }
+                return;
             }
-            return;
+        } catch (APIException ex) {
+            logger.error(ex.getMessage(), ex);
         }
 
         CollectionProvider.getFrozen().put(event.getPlayer().getUniqueId(), 0L);
         Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat."));
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has been sent a verification request.");
         }
     }

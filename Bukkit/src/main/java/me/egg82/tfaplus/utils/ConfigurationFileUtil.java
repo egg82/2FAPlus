@@ -4,6 +4,14 @@ import com.authy.AuthyApiClient;
 import com.google.common.reflect.TypeToken;
 import com.rabbitmq.client.ConnectionFactory;
 import com.zaxxer.hikari.HikariConfig;
+import java.io.*;
+import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.core.FreezeConfigContainer;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
@@ -22,15 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.DumperOptions;
 import redis.clients.jedis.JedisPool;
-
-import java.io.*;
-import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class ConfigurationFileUtil {
     private static final Logger logger = LoggerFactory.getLogger(ConfigurationFileUtil.class);
@@ -170,8 +169,8 @@ public class ConfigurationFileUtil {
 
         CachedConfigValues cachedValues = CachedConfigValues.builder()
                 .debug(debug)
-                .ipTime(ipTimeLong.get(), ipTimeUnit.get())
-                .verificationTime(verificationTimeLong.get(), verificationTimeUnit.get())
+                .ipCacheTime(ipTimeLong.get(), ipTimeUnit.get())
+                .verificationCacheTime(verificationTimeLong.get(), verificationTimeUnit.get())
                 .commands(commands)
                 .forceAuth(forceAuth)
                 .maxAttempts(maxAttempts)
@@ -181,6 +180,7 @@ public class ConfigurationFileUtil {
                 .rabbitConnectionFactory(getRabbitConnectionFactory(config.getNode("rabbitmq")))
                 .sql(getSQL(plugin, config.getNode("storage")))
                 .sqlType(config.getNode("storage", "method").getString("sqlite"))
+                .serverName(ServerNameUtil.getName(new File(plugin.getDataFolder(), "server-name.txt")))
                 .authy(getAuthy(config.getNode("authy", "key").getString(""), debug))
                 .build();
 

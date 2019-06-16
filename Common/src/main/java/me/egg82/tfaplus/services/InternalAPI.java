@@ -121,7 +121,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Setting login for " + uuid + " (" + ip + ")");
         }
 
@@ -156,7 +156,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting login for " + uuid + " (" + ip + ")");
         }
 
@@ -183,7 +183,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Registering HOTP " + uuid);
         }
 
@@ -233,7 +233,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Registering TOTP " + uuid);
         }
 
@@ -283,7 +283,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Registering Authy " + uuid + " (" + email + ", +" + countryCode + " " + phone + ")");
         }
 
@@ -331,7 +331,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Removing data for " + uuid);
         }
 
@@ -437,7 +437,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Verifying Authy " + uuid + " with " + token);
         }
 
@@ -493,7 +493,7 @@ public class InternalAPI {
             throw new APIException(false, "token provided is not an int.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Verifying TOTP " + uuid + " with " + intToken);
         }
 
@@ -558,7 +558,7 @@ public class InternalAPI {
             throw new APIException(false, "token provided is not an int.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Verifying HOTP " + uuid + " with " + token);
         }
 
@@ -606,7 +606,7 @@ public class InternalAPI {
         return false;
     }
 
-    public boolean seekHOTPCounter(UUID uuid, String[] tokens) throws APIException {
+    public void seekHOTPCounter(UUID uuid, String[] tokens) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
@@ -624,7 +624,7 @@ public class InternalAPI {
             intTokens.add(intToken);
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Seeking HOTP counter for " + uuid);
         }
 
@@ -651,7 +651,7 @@ public class InternalAPI {
             hotp = new HmacOneTimePasswordGenerator((int) data.get().getLength());
         } catch (NoSuchAlgorithmException ex) {
             logger.error(ex.getMessage(), ex);
-            return false;
+            throw new APIException(true, ex);
         }
 
         int counter = -1;
@@ -674,12 +674,12 @@ public class InternalAPI {
                 }
             } catch (InvalidKeyException ex) {
                 logger.error(ex.getMessage(), ex);
-                return false;
+                throw new APIException(true, ex);
             }
         }
 
         if (counter < 0) {
-            return false;
+            throw new APIException(false, "Could not seek HOTP counter form tokens provided.");
         }
 
         // Update SQL
@@ -705,8 +705,6 @@ public class InternalAPI {
 
         // Update cache
         hotpCache.put(uuid, new HOTPCacheData(data.get().getLength(), counter, data.get().getKey()));
-
-        return true;
     }
 
     private void setHOTP(UUID uuid, long length, long counter, SecretKey key) throws APIException {
@@ -715,7 +713,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Setting new HOTP counter for " + uuid);
         }
 
@@ -750,12 +748,12 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting Authy status for " + uuid);
         }
 
         if (!cachedConfig.get().getAuthy().isPresent()) {
-            if (cachedConfig.get().getDebug()) {
+            if (ConfigUtil.getDebugOrFalse()) {
                 logger.info("Authy is not enabled. Returning false.");
             }
             return false;
@@ -784,7 +782,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting TOTP status for " + uuid);
         }
 
@@ -811,7 +809,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting HOTP status for " + uuid);
         }
 
@@ -844,7 +842,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting expensive login for " + uuid + " (" + ip + ")");
         }
 
@@ -889,7 +887,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting TOTP for " + uuid);
         }
 
@@ -934,7 +932,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting HOTP for " + uuid);
         }
 
@@ -979,7 +977,7 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
+        if (ConfigUtil.getDebugOrFalse()) {
             logger.info("Getting Authy ID for " + uuid);
         }
 

@@ -52,6 +52,9 @@ public class CachedConfigValues {
     private SQLType sqlType = SQLType.SQLite;
     public SQLType getSQLType() { return sqlType; }
 
+    private String serverName = null;
+    public String getServerName() { return serverName; }
+
     private AuthyApiClient authy = null;
     public Optional<AuthyApiClient> getAuthy() { return Optional.ofNullable(authy); }
 
@@ -145,11 +148,23 @@ public class CachedConfigValues {
             return this;
         }
 
-        public CachedConfigValues.Builder authy(AuthyApiClient value) {
+        public CachedConfigValues.Builder serverName(String value) {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
-            values.authy = value;
+            values.serverName = value;
+            return this;
+        }
+
+        public CachedConfigValues.Builder authy(Optional<AuthyApiClient> value) {
+            if (value == null) {
+                throw new IllegalArgumentException("value cannot be null.");
+            }
+            if (!value.isPresent()) {
+                return this;
+            }
+
+            values.authy = value.get();
             return this;
         }
 

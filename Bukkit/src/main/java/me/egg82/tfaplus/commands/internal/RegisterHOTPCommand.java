@@ -2,6 +2,10 @@ package me.egg82.tfaplus.commands.internal;
 
 import co.aikar.taskchain.TaskChain;
 import co.aikar.taskchain.TaskChainAbortAction;
+import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.services.lookup.PlayerLookup;
@@ -14,10 +18,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Optional;
-import java.util.UUID;
 
 public class RegisterHOTPCommand implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -53,7 +53,17 @@ public class RegisterHOTPCommand implements Runnable {
                         return;
                     }
 
-                    f.accept(api.registerHOTP(v, config.get().getNode("otp", "digits").getLong(), initialCounterValue));
+                    try {
+                        f.accept(api.registerHOTP(v, config.get().getNode("otp", "digits").getLong(), initialCounterValue));
+                    } catch (APIException ex) {
+                        logger.error(ex.getMessage(), ex);
+                    }
+                })
+                .abortIfNull(new TaskChainAbortAction<Object, Object, Object>() {
+                    @Override
+                    public void onAbort(TaskChain<?> chain, Object arg1) {
+                        sender.sendMessage(LogUtil.getHeading() + LogUtil.getHeading() + ChatColor.YELLOW + "Internal error");
+                    }
                 })
                 .syncLast(v -> {
                     if (v == null) {

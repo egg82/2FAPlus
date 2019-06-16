@@ -1,12 +1,11 @@
 package me.egg82.tfaplus.renderers;
 
+import java.awt.image.BufferedImage;
+import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
-
-import java.awt.image.BufferedImage;
-import java.util.UUID;
 
 /**
  * Largely taken from SecureMyAccount
@@ -26,6 +25,16 @@ public class ImageRenderer extends MapRenderer {
 
     @Override
     public void render(MapView mapView, MapCanvas mapCanvas, Player player) {
+        if (mapView == null) {
+            throw new IllegalArgumentException("mapView cannot be null.");
+        }
+        if (mapCanvas == null) {
+            throw new IllegalArgumentException("mapCanvas cannot be null.");
+        }
+        if (player == null) {
+            throw new IllegalArgumentException("player cannot be null.");
+        }
+
         if (player.getUniqueId().equals(playerUUID)) {
             mapCanvas.drawImage(0, 0, image);
         }

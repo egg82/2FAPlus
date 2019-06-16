@@ -1,5 +1,8 @@
 package me.egg82.tfaplus.events;
 
+import java.util.Optional;
+import java.util.function.Consumer;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
@@ -9,9 +12,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
-import java.util.function.Consumer;
 
 public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerCommandPreprocessEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -45,14 +45,19 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                     command = command.trim() + " ";
 
                     if (split.startsWith(command)) {
-                        if (!api.isRegistered(event.getPlayer().getUniqueId())) {
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
-                            event.setCancelled(true);
-                        } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
-                            CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
-                            event.setCancelled(true);
+                        try {
+                            if (!api.isRegistered(event.getPlayer().getUniqueId())) {
+                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
+                                event.setCancelled(true);
+                            } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
+                                CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
+                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
+                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
+                                event.setCancelled(true);
+                            }
+                        } catch (APIException ex) {
+                            logger.error(ex.getMessage(), ex);
+                            event.setCancelled(true); // Assume event cancellation
                         }
                         break;
                     }
@@ -62,14 +67,19 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                     command = command.trim() + " ";
 
                     if (message.startsWith(command)) {
-                        if (!api.isRegistered(event.getPlayer().getUniqueId())) {
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
-                            event.setCancelled(true);
-                        } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
-                            CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
-                            event.setCancelled(true);
+                        try {
+                            if (!api.isRegistered(event.getPlayer().getUniqueId())) {
+                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
+                                event.setCancelled(true);
+                            } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
+                                CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
+                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
+                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
+                                event.setCancelled(true);
+                            }
+                        } catch (APIException ex) {
+                            logger.error(ex.getMessage(), ex);
+                            event.setCancelled(true); // Assume event cancellation
                         }
                         break;
                     }

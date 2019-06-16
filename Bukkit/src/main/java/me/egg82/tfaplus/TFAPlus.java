@@ -8,6 +8,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.File;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import me.egg82.tfaplus.commands.HOTPCommand;
 import me.egg82.tfaplus.commands.TFAPlusCommand;
 import me.egg82.tfaplus.events.*;
@@ -39,10 +45,6 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.logging.Level;
 
 public class TFAPlus {
     private final Logger logger = LoggerFactory.getLogger(getClass());

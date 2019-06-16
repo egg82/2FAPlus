@@ -1,5 +1,11 @@
 package me.egg82.tfaplus.utils;
 
+import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Optional;
+import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.renderers.ImageRenderer;
 import me.egg82.tfaplus.renderers.QRRenderer;
 import org.bukkit.Bukkit;
@@ -10,11 +16,6 @@ import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.awt.image.BufferedImage;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Map;
 
 /**
  * Largely taken from SecureMyAccount
@@ -55,7 +56,13 @@ public class MapUtil {
             throw new IllegalArgumentException("player cannot be null.");
         }
 
-        BufferedImage image = QRRenderer.getTOTPImage(player.getName(), getServerName(), key, issuer, codeLength);
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            logger.error("Could not get cached config.");
+            return;
+        }
+
+        BufferedImage image = QRRenderer.getTOTPImage(player.getName(), cachedConfig.get().getServerName(), key, issuer, codeLength);
         MapView view = getView(player, image);
 
         ItemStack map;
@@ -86,7 +93,13 @@ public class MapUtil {
             throw new IllegalArgumentException("player cannot be null.");
         }
 
-        BufferedImage image = QRRenderer.getHOTPImage(player.getName(), getServerName(), key, issuer, codeLength, counter);
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            logger.error("Could not get cached config.");
+            return;
+        }
+
+        BufferedImage image = QRRenderer.getHOTPImage(player.getName(), cachedConfig.get().getServerName(), key, issuer, codeLength, counter);
         MapView view = getView(player, image);
 
         ItemStack map;
@@ -118,14 +131,6 @@ public class MapUtil {
 
         retVal.addRenderer(new ImageRenderer(player.getUniqueId(), image));
         return retVal;
-    }
-
-    private static String getServerName() {
-        String name = Bukkit.getServerName();
-        if (name == null || name.isEmpty() || name.equalsIgnoreCase("unnamed") || name.equalsIgnoreCase("unknown") || name.equalsIgnoreCase("default") || name.startsWith("Unknown")) {
-            return "Unknown";
-        }
-        return name;
     }
 
     private static void setData(ItemStack stack, String name, MapView view) {

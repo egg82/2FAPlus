@@ -1,5 +1,11 @@
 package me.egg82.tfaplus.events;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
@@ -17,12 +23,6 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.Plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Consumer;
 
 public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -50,10 +50,15 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                     CollectionProvider.getHOTPFrozen().remove(event.getPlayer().getUniqueId());
                     event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Attempting to re-synchronize your counter, please wait..");
 
-                    if (api.seekHOTPCounter(event.getPlayer().getUniqueId(), pair.getSecond())) {
-                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your counter has been successfully re-synchronized!");
-                    } else {
-                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your counter could not be re-synchronized using the codes provided. Please try again.");
+                    try {
+                        api.seekHOTPCounter(event.getPlayer().getUniqueId(), pair.getSecond());
+                    } catch (APIException ex) {
+                        if (ex.isHard()) {
+                            logger.error(ex.getMessage(), ex);
+                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Internal error");
+                        } else {
+                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your counter could not be re-synchronized using the codes provided. Please try again.");
+                        }
                     }
                 } else {
                     event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.WHITE + (pair.getFirst() - pair.getSecond().size()) + ChatColor.YELLOW + " more code" + (pair.getFirst() - pair.getSecond().size() > 1 ? "s" : "") + " to go!");
@@ -69,14 +74,18 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                 event.setCancelled(true);
 
                 event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
-                Optional<Boolean> result = api.verify(event.getPlayer().getUniqueId(), message);
-                if (!result.isPresent()) {
-                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code.");
-                    return;
-                }
-                if (!result.get()) {
-                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
-                    return;
+                try {
+                    if (!api.verify(event.getPlayer().getUniqueId(), message)) {
+                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
+                        return;
+                    }
+                } catch (APIException ex) {
+                    if (ex.isHard()) {
+                        logger.error(ex.getMessage(), ex);
+                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Internal error");
+                    } else {
+                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
+                    }
                 }
 
                 String command = CollectionProvider.getCommandFrozen().remove(event.getPlayer().getUniqueId());
@@ -114,34 +123,41 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         event.setCancelled(true);
 
         event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
-        Optional<Boolean> result = api.verify(event.getPlayer().getUniqueId(), message);
+        try {
+            if (!api.verify(event.getPlayer().getUniqueId(), message)) {
+                long attempts = CollectionProvider.getFrozen().compute(event.getPlayer().getUniqueId(), (k, v) -> {
+                    if (v == null) {
+                        return 1L;
+                    }
+                    return v + 1L;
+                });
 
-        if (!result.isPresent()) {
-            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code.");
-            return;
-        }
-
-        if (!result.get()) {
-            long attempts = CollectionProvider.getFrozen().compute(event.getPlayer().getUniqueId(), (k, v) -> {
-                if (v == null) {
-                    return 1L;
-                }
-                return v + 1L;
-            });
-
-            if (cachedConfig.get().getMaxAttempts() <= 0L || attempts < cachedConfig.get().getMaxAttempts()) {
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
-            } else {
-                if (event.isAsynchronous()) {
-                    Bukkit.getScheduler().runTask(plugin, () -> kickPlayer(config.get(), event.getPlayer()));
+                if (cachedConfig.get().getMaxAttempts() <= 0L || attempts < cachedConfig.get().getMaxAttempts()) {
+                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
                 } else {
-                    kickPlayer(config.get(), event.getPlayer());
+                    if (event.isAsynchronous()) {
+                        Bukkit.getScheduler().runTask(plugin, () -> kickPlayer(config.get(), event.getPlayer()));
+                    } else {
+                        kickPlayer(config.get(), event.getPlayer());
+                    }
                 }
+                return;
             }
-            return;
+        } catch (APIException ex) {
+            if (ex.isHard()) {
+                logger.error(ex.getMessage(), ex);
+                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Internal error");
+            } else {
+                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
+            }
         }
 
-        InternalAPI.setLogin(event.getPlayer().getUniqueId(), getIp(event.getPlayer()));
+        try {
+            InternalAPI.setLogin(event.getPlayer().getUniqueId(), getIp(event.getPlayer()));
+        } catch (APIException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+
         CollectionProvider.getFrozen().remove(event.getPlayer().getUniqueId());
         event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your 2FA code was successfully verified!");
     }

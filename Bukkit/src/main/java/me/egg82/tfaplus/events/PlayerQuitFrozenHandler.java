@@ -1,9 +1,8 @@
 package me.egg82.tfaplus.events;
 
+import java.util.function.Consumer;
 import me.egg82.tfaplus.services.CollectionProvider;
 import org.bukkit.event.player.PlayerQuitEvent;
-
-import java.util.function.Consumer;
 
 public class PlayerQuitFrozenHandler implements Consumer<PlayerQuitEvent> {
     public void accept(PlayerQuitEvent event) {

@@ -253,10 +253,6 @@ public class ExternalAPI {
         } catch (NoSuchMethodException | IllegalAccessException ex) {
             throw new APIException(true, "Could not invoke base method.", ex);
         } catch (InvocationTargetException ex) {
-            Throwable t = ex.getTargetException();
-            if (t.getClass().getName().equals("me.egg82.tfaplus.APIException")) {
-                throw convertToAPIException(t);
-            }
             throw new APIException(true, "Could not invoke base method.", ex);
         }
     }

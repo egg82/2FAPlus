@@ -1,11 +1,10 @@
 package me.egg82.tfaplus.services;
 
-import ninja.egg82.tuples.longs.LongObjectPair;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import ninja.egg82.tuples.longs.LongObjectPair;
 
 public class CollectionProvider {
     private CollectionProvider() {}

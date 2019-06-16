@@ -4,6 +4,7 @@ import co.aikar.commands.BaseCommand;
 import co.aikar.commands.CommandHelp;
 import co.aikar.commands.annotation.*;
 import co.aikar.taskchain.TaskChainFactory;
+import java.util.ArrayList;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.LogUtil;
 import ninja.egg82.tuples.longs.LongObjectPair;
@@ -11,8 +12,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
-import java.util.ArrayList;
 
 @CommandAlias("hotp")
 public class HOTPCommand extends BaseCommand {

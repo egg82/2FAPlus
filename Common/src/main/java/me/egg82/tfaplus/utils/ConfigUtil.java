@@ -53,6 +53,6 @@ public class ConfigUtil {
 
     public static boolean getDebugOrFalse() {
         Optional<CachedConfigValues> cachedConfig = getCachedConfig();
-        return cachedConfig.isPresent() && cachedConfig.get().getDebug();
+        return cachedConfig.isPresent() && ConfigUtil.getDebugOrFalse();
     }
 }

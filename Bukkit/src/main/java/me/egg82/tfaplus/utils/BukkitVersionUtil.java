@@ -2,10 +2,9 @@ package me.egg82.tfaplus.utils;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import java.util.List;
 import ninja.egg82.reflect.PackageFilter;
 import org.bukkit.Bukkit;
-
-import java.util.List;
 
 public class BukkitVersionUtil {
     private static String gameVersion = null;

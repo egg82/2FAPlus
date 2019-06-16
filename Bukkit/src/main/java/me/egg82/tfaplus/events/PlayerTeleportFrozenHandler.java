@@ -2,6 +2,10 @@ package me.egg82.tfaplus.events;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.ConfigUtil;
@@ -11,11 +15,6 @@ import org.bukkit.Location;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 public class PlayerTeleportFrozenHandler implements Consumer<PlayerTeleportEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
