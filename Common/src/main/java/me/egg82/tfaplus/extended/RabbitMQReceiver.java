@@ -1,6 +1,11 @@
 package me.egg82.tfaplus.extended;
 
 import com.rabbitmq.client.*;
+import java.io.IOException;
+import java.util.Base64;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
@@ -10,17 +15,10 @@ import me.egg82.tfaplus.services.RabbitMQ;
 import me.egg82.tfaplus.utils.RabbitMQUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.analytics.utils.JSONUtil;
-import ninja.egg82.service.ServiceLocator;
-import ninja.egg82.service.ServiceNotFoundException;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Base64;
-import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 
 public class RabbitMQReceiver {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -30,9 +28,9 @@ public class RabbitMQReceiver {
     private Connection connection = null;
     private Channel channel = null;
 
-    public RabbitMQReceiver(ConnectionFactory factory) {
+    public RabbitMQReceiver() {
         try {
-            connection = RabbitMQUtil.getConnection(factory);
+            connection = RabbitMQUtil.getConnection();
             channel = RabbitMQUtil.getChannel(connection);
 
             if (channel == null) {
@@ -86,11 +84,8 @@ public class RabbitMQReceiver {
                             return;
                         }
 
-                        CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                        Configuration config = ServiceLocator.get(Configuration.class);
-
                         InternalAPI.add(new LoginData(uuid, ip, created));
-                    } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                    } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
                 }
@@ -118,11 +113,8 @@ public class RabbitMQReceiver {
                             return;
                         }
 
-                        CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                        Configuration config = ServiceLocator.get(Configuration.class);
-
                         InternalAPI.add(new AuthyData(uuid, i));
-                    } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                    } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
                 }
@@ -151,11 +143,8 @@ public class RabbitMQReceiver {
                             return;
                         }
 
-                        CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                        Configuration config = ServiceLocator.get(Configuration.class);
-
                         InternalAPI.add(new TOTPData(uuid, length, key));
-                    } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                    } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
                 }
@@ -185,11 +174,8 @@ public class RabbitMQReceiver {
                             return;
                         }
 
-                        CachedConfigValues cachedConfig = ServiceLocator.get(CachedConfigValues.class);
-                        Configuration config = ServiceLocator.get(Configuration.class);
-
                         InternalAPI.add(new HOTPData(uuid, length, counter, key));
-                    } catch (ParseException | ClassCastException | NullPointerException | IllegalAccessException | InstantiationException | ServiceNotFoundException ex) {
+                    } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
                 }
@@ -200,13 +186,20 @@ public class RabbitMQReceiver {
                 public void handleDelivery(String tag, Envelope envelope, AMQP.BasicProperties properies, byte[] body) throws IOException {
                     String message = new String(body, "UTF-8");
 
+                    if (!ValidationUtil.isValidUuid(message)) {
+                        logger.warn("non-valid UUID sent through RabbitMQ");
+                        return;
+                    }
+
                     // In this case, the message is the "UUID"
-                    InternalAPI.delete(message);
+                    try {
+                        InternalAPI.delete(UUID.fromString(message));
+                    } catch (APIException ex) {
+                        logger.error(ex.getMessage(), ex);
+                    }
                 }
             };
             channel.basicConsume(deleteQueueName, true, deleteConsumer);
-        } catch (ShutdownSignalException ignored) {
-
         } catch (IOException | TimeoutException ex) {
             logger.error(ex.getMessage(), ex);
         }

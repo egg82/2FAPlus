@@ -1,10 +1,9 @@
 package me.egg82.tfaplus.core;
 
-import me.egg82.tfaplus.extended.ServiceKeys;
-
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import java.util.UUID;
+import me.egg82.tfaplus.extended.ServiceKeys;
 
 public class TOTPData {
     private final UUID uuid;

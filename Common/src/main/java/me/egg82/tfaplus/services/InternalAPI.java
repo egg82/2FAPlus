@@ -4,15 +4,20 @@ import com.authy.AuthyException;
 import com.authy.api.Hash;
 import com.authy.api.Token;
 import com.authy.api.User;
-import com.authy.api.Users;
 import com.eatthepath.otp.HmacOneTimePasswordGenerator;
 import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.rabbitmq.client.Connection;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.core.*;
 import me.egg82.tfaplus.enums.SQLType;
@@ -21,33 +26,26 @@ import me.egg82.tfaplus.extended.ServiceKeys;
 import me.egg82.tfaplus.sql.MySQL;
 import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import me.egg82.tfaplus.utils.RabbitMQUtil;
-import ninja.egg82.tuples.objects.ObjectObjectPair;
-import ninja.leaping.configurate.ConfigurationNode;
 import org.apache.commons.codec.binary.Base32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
 public class InternalAPI {
     private static final Logger logger = LoggerFactory.getLogger(InternalAPI.class);
 
-    private static Cache<ObjectObjectPair<UUID, String>, Boolean> loginCache = Caffeine.newBuilder().expireAfterAccess(1L,TimeUnit.MINUTES).expireAfterWrite(1L,TimeUnit.HOURS).build();
+    private static Cache<LoginCacheData, Boolean> loginCache = Caffeine.newBuilder().expireAfterAccess(1L,TimeUnit.MINUTES).expireAfterWrite(1L,TimeUnit.HOURS).build();
     private static Cache<UUID, Long> authyCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static Cache<UUID, TOTPCacheData> totpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static Cache<UUID, HOTPCacheData> hotpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static LoadingCache<UUID, Boolean> verificationCache = Caffeine.newBuilder().expireAfterWrite(3L, TimeUnit.MINUTES).build(k -> Boolean.FALSE);
 
     private static final Base32 encoder = new Base32();
+
+    private static final Object loginCacheLock = new Object();
+
+    private final Object authyCacheLock = new Object();
+    private final Object totpCacheLock = new Object();
+    private final Object hotpCacheLock = new Object();
 
     public static void changeVerificationTime(long duration, TimeUnit unit) {
         verificationCache = Caffeine.newBuilder().expireAfterWrite(duration, unit).build(k -> Boolean.FALSE);
@@ -59,14 +57,13 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-        if (storageConfigNode == null) {
-            throw new APIException(true, "Could not get config.");
-        }
-
-        loginCache.put(new ObjectObjectPair<>(data.getUUID(), data.getIP()), Boolean.TRUE);
+        loginCache.put(new LoginCacheData(data.getUUID(), data.getIP()), Boolean.TRUE);
         if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-            SQLite.addLogin(data, cachedConfig.get().getSQL(), storageConfigNode);
+            try {
+                SQLite.addLogin(data);
+            } catch (SQLException ex) {
+                throw new APIException(true, ex);
+            }
         }
     }
 
@@ -76,14 +73,13 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-        if (storageConfigNode == null) {
-            throw new APIException(true, "Could not get config.");
-        }
-
         authyCache.put(data.getUUID(), data.getID());
         if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-            SQLite.addAuthy(data, cachedConfig.get().getSQL(), storageConfigNode);
+            try {
+                SQLite.addAuthy(data);
+            } catch (SQLException ex) {
+                throw new APIException(true, ex);
+            }
         }
     }
 
@@ -93,14 +89,13 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-        if (storageConfigNode == null) {
-            throw new APIException(true, "Could not get config.");
-        }
-
         totpCache.put(data.getUUID(), new TOTPCacheData(data.getLength(), data.getKey()));
         if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-            SQLite.addTOTP(data, cachedConfig.get().getSQL(), storageConfigNode);
+            try {
+                SQLite.addTOTP(data);
+            } catch (SQLException ex) {
+                throw new APIException(true, ex);
+            }
         }
     }
 
@@ -110,15 +105,76 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-        if (storageConfigNode == null) {
-            throw new APIException(true, "Could not get config.");
-        }
-
         hotpCache.put(data.getUUID(), new HOTPCacheData(data.getLength(), data.getCounter(), data.getKey()));
         if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-            SQLite.addHOTP(data, cachedConfig.get().getSQL(), storageConfigNode);
+            try {
+                SQLite.addHOTP(data);
+            } catch (SQLException ex) {
+                throw new APIException(true, ex);
+            }
         }
+    }
+
+    public static void setLogin(UUID uuid, String ip) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Setting login for " + uuid + " (" + ip + ")");
+        }
+
+        // Update SQL
+        LoginData sqlResult = null;
+        try {
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                sqlResult = MySQL.updateLogin(uuid, ip);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                sqlResult = SQLite.updateLogin(uuid, ip);
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        if (sqlResult == null) {
+            throw new APIException(true, "Could not add login in SQL.");
+        }
+
+        // Update messaging/Redis
+        Redis.update(sqlResult);
+        RabbitMQ.broadcast(sqlResult);
+
+        // Update cache
+        loginCache.put(new LoginCacheData(uuid, ip), Boolean.TRUE);
+    }
+
+    public static boolean getLogin(UUID uuid, String ip) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Getting login for " + uuid + " (" + ip + ")");
+        }
+
+        LoginCacheData key = new LoginCacheData(uuid, ip);
+
+        Optional<Boolean> result = Optional.ofNullable(loginCache.getIfPresent(key));
+        if (!result.isPresent()) {
+            synchronized (loginCacheLock) {
+                result = Optional.ofNullable(loginCache.getIfPresent(key));
+                if (!result.isPresent()) {
+                    result = Optional.of(loginExpensive(uuid, ip));
+                    loginCache.put(key, result.get());
+                    return result.get();
+                }
+            }
+        }
+
+        return result.get();
     }
 
     public String registerHOTP(UUID uuid, long codeLength, long initialCounter) throws APIException {
@@ -144,19 +200,29 @@ public class InternalAPI {
         keyGen.init(512);
         SecretKey key = keyGen.generateKey();
 
-        // SQL
-        HOTPData result = getHotpData(uuid, codeLength, initialCounter, key);
-        if (result == null) {
+        // Update SQL
+        HOTPData sqlResult = null;
+        try {
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                sqlResult = MySQL.updateHOTP(uuid, codeLength, initialCounter, key);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                sqlResult = SQLite.updateHOTP(uuid, codeLength, initialCounter, key);
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        if (sqlResult == null) {
             throw new APIException(true, "Could not register HOTP data in SQL.");
         }
 
-        // Redis
-        Redis.update(result);
+        // Update messaging/Redis
+        Redis.update(sqlResult);
+        RabbitMQ.broadcast(sqlResult);
 
-        // RabbitMQ
-        broadcastResult(result);
-
-        hotpCache.put(uuid, new HOTPCacheData(codeLength, result.getCounter(), key));
+        // Update cache
+        hotpCache.put(uuid, new HOTPCacheData(codeLength, sqlResult.getCounter(), key));
 
         return encoder.encodeToString(key.getEncoded());
     }
@@ -184,47 +250,36 @@ public class InternalAPI {
         keyGen.init(512);
         SecretKey key = keyGen.generateKey();
 
-        // SQL
-        TOTPData result = null;
+        // Update SQL
+        TOTPData sqlResult = null;
         try {
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.updateTOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, codeLength, key).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.updateTOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, codeLength, key).get();
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                sqlResult = MySQL.updateTOTP(uuid, codeLength, key);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                sqlResult = SQLite.updateTOTP(uuid, codeLength, key);
             }
-        } catch (ExecutionException ex) {
+        } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
+            throw new APIException(true, ex);
         }
 
-        if (result == null) {
+        if (sqlResult == null) {
             throw new APIException(true, "Could not register TOTP data in SQL.");
         }
 
-        // Redis
-        Redis.update(result);
+        // Update messaging/Redis
+        Redis.update(sqlResult);
+        RabbitMQ.broadcast(sqlResult);
 
-        // RabbitMQ
-        try {
-            RabbitMQ.broadcast(result, getRabbitConnection());
-        } catch (IOException | TimeoutException e) {
-            logger.error(e.getMessage(), e);
-        }
-
+        // Update cache
         totpCache.put(uuid, new TOTPCacheData(codeLength, key));
 
         return encoder.encodeToString(key.getEncoded());
     }
 
-    private static Connection getRabbitConnection() throws IOException, TimeoutException {
-        return RabbitMQUtil.getConnection(ConfigUtil.getCachedConfig().getRabbitConnectionFactory());
-    }
-
     public void registerAuthy(UUID uuid, String email, String phone, String countryCode) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
+        if (!cachedConfig.isPresent() || !cachedConfig.get().getAuthy().isPresent()) {
             throw new APIException(true, "Could not get cached config.");
         }
 
@@ -234,7 +289,7 @@ public class InternalAPI {
 
         User user;
         try {
-           user = getAuthyUsers().createUser(email, phone, countryCode);
+           user = cachedConfig.get().getAuthy().get().getUsers().createUser(email, phone, countryCode);
         } catch (AuthyException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -245,43 +300,32 @@ public class InternalAPI {
             throw new APIException(true, user.getError().getMessage());
         }
 
-        // SQL
-        AuthyData result = null;
+        // Update SQL
+        AuthyData sqlResult = null;
         try {
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.updateAuthy(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, user.getId()).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.updateAuthy(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, user.getId()).get();
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                sqlResult = MySQL.updateAuthy(uuid, user.getId());
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                sqlResult = SQLite.updateAuthy(uuid, user.getId());
             }
-        } catch (ExecutionException ex) {
+        } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
+            throw new APIException(true, ex);
         }
 
-        if (result == null) {
+        if (sqlResult == null) {
             throw new APIException(true, "Could not register Authy data in SQL.");
         }
 
-        // Redis
-        Redis.update(result);
+        // Update messaging/Redis
+        Redis.update(sqlResult);
+        RabbitMQ.broadcast(sqlResult);
 
-        // RabbitMQ
-        try {
-            RabbitMQ.broadcast(result, getRabbitConnection());
-        } catch (IOException | TimeoutException e) {
-            logger.error(e.getMessage(), e);
-        }
-
-        authyCache.put(uuid, result.getID());
+        // Update cache
+        authyCache.put(uuid, sqlResult.getID());
     }
 
-    private Users getAuthyUsers() {
-        return ConfigUtil.getAuthy().get().getUsers();
-    }
-
-    public void delete(UUID uuid, Users users) throws APIException {
+    public static void delete(UUID uuid) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
@@ -291,8 +335,51 @@ public class InternalAPI {
             logger.info("Removing data for " + uuid);
         }
 
-        for (Map.Entry<ObjectObjectPair<UUID, String>, Boolean> kvp : loginCache.asMap().entrySet()) {
-            if (uuid.equals(kvp.getKey().getFirst())) {
+        // Delete authy
+        if (cachedConfig.get().getAuthy().isPresent()) {
+            Optional<AuthyData> sqlResult = Optional.empty();
+            try {
+                if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                    sqlResult = MySQL.getAuthyData(uuid);
+                } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                    sqlResult = SQLite.getAuthyData(uuid);
+                }
+            } catch (SQLException ex) {
+                logger.error(ex.getMessage(), ex);
+                throw new APIException(true, ex);
+            }
+
+            if (sqlResult.isPresent()) {
+                Hash response;
+                try {
+                    response = cachedConfig.get().getAuthy().get().getUsers().deleteUser((int) sqlResult.get().getID());
+                } catch (AuthyException ex) {
+                    logger.error(ex.getMessage(), ex);
+                    throw new APIException(true, ex);
+                }
+
+                if (!response.isOk()) {
+                    logger.error(response.getError().getMessage());
+                    throw new APIException(true, response.getError().getMessage());
+                }
+            }
+        }
+
+        // Delete SQL
+        try {
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                MySQL.delete(uuid);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                SQLite.delete(uuid);
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        // Invalidate cache
+        for (Map.Entry<LoginCacheData, Boolean> kvp : loginCache.asMap().entrySet()) {
+            if (uuid.equals(kvp.getKey().getUUID())) {
                 loginCache.invalidate(kvp.getKey());
             }
         }
@@ -301,99 +388,52 @@ public class InternalAPI {
         authyCache.invalidate(uuid);
         verificationCache.invalidate(uuid);
 
-        AuthyData result = null;
-        try {
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        if (result != null && users != null) {
-            Hash response;
-            try {
-                response = users.deleteUser((int) result.getID());
-            } catch (AuthyException ex) {
-                logger.error(ex.getMessage(), ex);
-                throw new APIException(true, ex);
-            }
-
-            if (!response.isOk()) {
-                logger.error(response.getError().getMessage());
-                throw new APIException(true, response.getError().getMessage());
-            }
-        }
-
-        // SQL
-        if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-            MySQL.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
-        } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-            SQLite.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
-        }
-
-        // Redis
+        // Delete messaging/Redis
         Redis.delete(uuid);
-
-        // RabbitMQ
-        rabbitDelete(uuid);
+        RabbitMQ.delete(uuid);
     }
 
-    private void rabbitDelete(UUID uuid) {
-        try {
-            RabbitMQ.delete(uuid, getRabbitConnection());
-        } catch (IOException | TimeoutException e) {
-            logger.error(e.getMessage(), e);
-        }
-    }
-
-    public static void delete(UUID uuid) throws APIException {
+    public static void deleteFromMessaging(UUID uuid) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        for (Map.Entry<ObjectObjectPair<UUID, String>, Boolean> kvp : loginCache.asMap().entrySet()) {
-            if (uuid.equals(kvp.getKey().getFirst())) {
+        // Delete SQL
+        if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+            try {
+                SQLite.delete(uuid);
+            } catch (SQLException ex) {
+                logger.error(ex.getMessage(), ex);
+                throw new APIException(true, ex);
+            }
+        }
+
+        // Invalidate cache
+        for (Map.Entry<LoginCacheData, Boolean> kvp : loginCache.asMap().entrySet()) {
+            if (uuid.equals(kvp.getKey().getUUID())) {
                 loginCache.invalidate(kvp.getKey());
             }
         }
         totpCache.invalidate(uuid);
         authyCache.invalidate(uuid);
         verificationCache.invalidate(uuid);
-
-        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-            SQLite.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
-        }
-    }
-
-    public static void delete(String uuid) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-            SQLite.delete(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode());
-        }
     }
 
     public boolean isVerified(UUID uuid, boolean refresh) {
         boolean retVal = verificationCache.get(uuid);
         if (refresh) {
             verificationCache.put(uuid, retVal);
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info(uuid + " verification token refreshed.");
+            }
         }
         return retVal;
     }
 
     public boolean verifyAuthy(UUID uuid, String token) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
+        if (!cachedConfig.isPresent() || !cachedConfig.get().getAuthy().isPresent()) {
             throw new APIException(true, "Could not get cached config.");
         }
 
@@ -401,9 +441,21 @@ public class InternalAPI {
             logger.info("Verifying Authy " + uuid + " with " + token);
         }
 
-        long id = authyCache.get(uuid, k -> getAuthyExpensive(uuid));
-        if (id < 0) {
-            logger.warn(uuid + " has not been registered.");
+        Optional<Long> id = Optional.ofNullable(authyCache.getIfPresent(uuid));
+        if (!id.isPresent()) {
+            synchronized (authyCacheLock) {
+                id = Optional.ofNullable(authyCache.getIfPresent(uuid));
+                if (!id.isPresent()) {
+                    id = authyExpensive(uuid);
+                    if (id.isPresent()) {
+                        authyCache.put(uuid, id.get());
+                    }
+                }
+            }
+        }
+
+        if (!id.isPresent()) {
+            logger.warn(uuid + " has not been registered with Authy.");
             throw new APIException(false, "User does not have Authy enabled.");
         }
 
@@ -412,7 +464,7 @@ public class InternalAPI {
 
         Token verification;
         try {
-            verification = ConfigUtil.getTokens().verify((int) id, token, options);
+            verification = cachedConfig.get().getAuthy().get().getTokens().verify(id.get().intValue(), token, options);
         } catch (AuthyException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -433,10 +485,6 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Verifying TOTP " + uuid + " with " + token);
-        }
-
         int intToken;
         try {
             intToken = Integer.parseInt(token);
@@ -445,15 +493,31 @@ public class InternalAPI {
             throw new APIException(false, "token provided is not an int.");
         }
 
-        TOTPCacheData data = totpCache.get(uuid, k -> getTOTPExpensive(uuid));
-        if (data == null) {
-            logger.warn(uuid + " has not been registered.");
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Verifying TOTP " + uuid + " with " + intToken);
+        }
+
+        Optional<TOTPCacheData> data = Optional.ofNullable(totpCache.getIfPresent(uuid));
+        if (!data.isPresent()) {
+            synchronized (totpCacheLock) {
+                data = Optional.ofNullable(totpCache.getIfPresent(uuid));
+                if (!data.isPresent()) {
+                    data = totpExpensive(uuid);
+                    if (data.isPresent()) {
+                        totpCache.put(uuid, data.get());
+                    }
+                }
+            }
+        }
+
+        if (!data.isPresent()) {
+            logger.warn(uuid + " has not been registered with TOTP.");
             throw new APIException(false, "User does not have TOTP enabled.");
         }
 
         TimeBasedOneTimePasswordGenerator totp;
         try {
-            totp = new TimeBasedOneTimePasswordGenerator(30L, TimeUnit.SECONDS, (int) data.getLength(), ServiceKeys.TOTP_ALGORITM);
+            totp = new TimeBasedOneTimePasswordGenerator(30L, TimeUnit.SECONDS, (int) data.get().getLength(), ServiceKeys.TOTP_ALGORITM);
         } catch (NoSuchAlgorithmException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -467,7 +531,7 @@ public class InternalAPI {
             Date d = new Date(now.getTime() + step);
 
             try {
-                if (totp.generateOneTimePassword(data.getKey(), d) == intToken) {
+                if (totp.generateOneTimePassword(data.get().getKey(), d) == intToken) {
                     verificationCache.put(uuid, Boolean.TRUE);
                     return true;
                 }
@@ -486,10 +550,6 @@ public class InternalAPI {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Verifying HOTP " + uuid + " with " + token);
-        }
-
         int intToken;
         try {
             intToken = Integer.parseInt(token);
@@ -498,15 +558,31 @@ public class InternalAPI {
             throw new APIException(false, "token provided is not an int.");
         }
 
-        HOTPCacheData data = hotpCache.get(uuid, k -> getHOTPExpensive(uuid));
-        if (data == null) {
-            logger.warn(uuid + " has not been registered.");
-            throw new APIException(false, "User does not have TOTP enabled.");
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Verifying HOTP " + uuid + " with " + token);
+        }
+
+        Optional<HOTPCacheData> data = Optional.ofNullable(hotpCache.getIfPresent(uuid));
+        if (!data.isPresent()) {
+            synchronized (hotpCacheLock) {
+                data = Optional.ofNullable(hotpCache.getIfPresent(uuid));
+                if (!data.isPresent()) {
+                    data = hotpExpensive(uuid);
+                    if (data.isPresent()) {
+                        hotpCache.put(uuid, data.get());
+                    }
+                }
+            }
+        }
+
+        if (!data.isPresent()) {
+            logger.warn(uuid + " has not been registered with HOTP.");
+            throw new APIException(false, "User does not have HOTP enabled.");
         }
 
         HmacOneTimePasswordGenerator hotp;
         try {
-            hotp = new HmacOneTimePasswordGenerator((int) data.getLength());
+            hotp = new HmacOneTimePasswordGenerator((int) data.get().getLength());
         } catch (NoSuchAlgorithmException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -516,8 +592,8 @@ public class InternalAPI {
         // This allows for a nice window ahead of the client in case of desync
         for (int i = 0; i <= 9; i++) {
             try {
-                if (hotp.generateOneTimePassword(data.getKey(), data.getCounter() + i) == intToken) {
-                    setHOTP(uuid, data.getLength(), data.getCounter() + i, data.getKey());
+                if (hotp.generateOneTimePassword(data.get().getKey(), data.get().getCounter() + i) == intToken) {
+                    setHOTP(uuid, data.get().getLength(), data.get().getCounter() + i, data.get().getKey());
                     verificationCache.put(uuid, Boolean.TRUE);
                     return true;
                 }
@@ -530,76 +606,10 @@ public class InternalAPI {
         return false;
     }
 
-    private void setHOTP(UUID uuid, long length, long counter, SecretKey key) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Setting new HOTP counter for " + uuid);
-        }
-
-        // SQL
-        HOTPData result = getHotpData(uuid, length, counter, key);
-        if (result == null) {
-            return;
-        }
-
-        // Redis
-        Redis.update(result);
-
-        // Rabbit
-        broadcastResult(result);
-
-        // Cache
-        hotpCache.put(uuid, new HOTPCacheData(length, counter, key));
-    }
-
-    private HOTPData getHotpData(UUID uuid, long length, long counter, SecretKey key) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        HOTPData result = null;
-        try {
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.updateHOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, length, counter, key).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.updateHOTP(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, length, counter, key).get();
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-        return result;
-    }
-
     public boolean seekHOTPCounter(UUID uuid, String[] tokens) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Seeking HOTP counter for " + uuid);
-        }
-
-        HOTPCacheData data = hotpCache.get(uuid, k -> getHOTPExpensive(uuid));
-        if (data == null) {
-            logger.warn(uuid + " has not been registered.");
-            return false;
-        }
-
-        HmacOneTimePasswordGenerator hotp;
-        try {
-            hotp = new HmacOneTimePasswordGenerator((int) data.getLength());
-        } catch (NoSuchAlgorithmException ex) {
-            logger.error(ex.getMessage(), ex);
-            return false;
         }
 
         IntList intTokens = new IntArrayList();
@@ -609,19 +619,49 @@ public class InternalAPI {
                 intToken = Integer.parseInt(token);
             } catch (NumberFormatException ex) {
                 logger.error(ex.getMessage(), ex);
-                return false;
+                throw new APIException(false, "tokens provided are not ints.");
             }
             intTokens.add(intToken);
+        }
+
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Seeking HOTP counter for " + uuid);
+        }
+
+        Optional<HOTPCacheData> data = Optional.ofNullable(hotpCache.getIfPresent(uuid));
+        if (!data.isPresent()) {
+            synchronized (hotpCacheLock) {
+                data = Optional.ofNullable(hotpCache.getIfPresent(uuid));
+                if (!data.isPresent()) {
+                    data = hotpExpensive(uuid);
+                    if (data.isPresent()) {
+                        hotpCache.put(uuid, data.get());
+                    }
+                }
+            }
+        }
+
+        if (!data.isPresent()) {
+            logger.warn(uuid + " has not been registered with HOTP.");
+            throw new APIException(false, "User does not have HOTP enabled.");
+        }
+
+        HmacOneTimePasswordGenerator hotp;
+        try {
+            hotp = new HmacOneTimePasswordGenerator((int) data.get().getLength());
+        } catch (NoSuchAlgorithmException ex) {
+            logger.error(ex.getMessage(), ex);
+            return false;
         }
 
         int counter = -1;
 
         for (int i = 0; i <= 2000; i++) {
             try {
-                if (hotp.generateOneTimePassword(data.getKey(), data.getCounter() + i) == intTokens.getInt(0)) {
+                if (hotp.generateOneTimePassword(data.get().getKey(), data.get().getCounter() + i) == intTokens.getInt(0)) {
                     boolean good = true;
                     for (int j = 1; j < intTokens.size(); j++) {
-                        if (hotp.generateOneTimePassword(data.getKey(), data.getCounter() + i + j) != intTokens.getInt(j)) {
+                        if (hotp.generateOneTimePassword(data.get().getKey(), data.get().getCounter() + i + j) != intTokens.getInt(j)) {
                             good = false;
                             break;
                         }
@@ -642,32 +682,66 @@ public class InternalAPI {
             return false;
         }
 
-        // SQL
-        HOTPData result = null;
-        result = getHotpData(uuid, data.getLength(), counter, data.getKey(), result);
-
-        if (result == null) {
-            return false;
+        // Update SQL
+        HOTPData sqlResult = null;
+        try {
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                sqlResult = MySQL.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                sqlResult = SQLite.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
         }
 
-        // Redis
-        Redis.update(result);
+        if (sqlResult == null) {
+            throw new APIException(true, "Could not update HOTP data in SQL.");
+        }
 
-        // Rabbit
-        broadcastResult(result);
+        // Update messaging/Redis
+        Redis.update(sqlResult);
+        RabbitMQ.broadcast(sqlResult);
 
-        // Cache
-        hotpCache.put(uuid, new HOTPCacheData(data.getLength(), counter, data.getKey()));
+        // Update cache
+        hotpCache.put(uuid, new HOTPCacheData(data.get().getLength(), counter, data.get().getKey()));
 
         return true;
     }
 
-    private void broadcastResult(HOTPData result) {
-        try {
-            RabbitMQ.broadcast(result, getRabbitConnection());
-        } catch (IOException | TimeoutException e) {
-            logger.error(e.getMessage(), e);
+    private void setHOTP(UUID uuid, long length, long counter, SecretKey key) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
         }
+
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Setting new HOTP counter for " + uuid);
+        }
+
+        // Update SQL
+        HOTPData sqlResult = null;
+        try {
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                sqlResult = MySQL.updateHOTP(uuid, length, counter, key);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                sqlResult = SQLite.updateHOTP(uuid, length, counter, key);
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        if (sqlResult == null) {
+            throw new APIException(true, "Could not update HOTP data in SQL.");
+        }
+
+        // Update messaging/Redis
+        Redis.update(sqlResult);
+        RabbitMQ.broadcast(sqlResult);
+
+        // Update cache
+        hotpCache.put(uuid, new HOTPCacheData(length, counter, key));
     }
 
     public boolean hasAuthy(UUID uuid) throws APIException {
@@ -680,7 +754,28 @@ public class InternalAPI {
             logger.info("Getting Authy status for " + uuid);
         }
 
-        return authyCache.get(uuid, k -> getAuthyExpensive(uuid)) >= 0L;
+        if (!cachedConfig.get().getAuthy().isPresent()) {
+            if (cachedConfig.get().getDebug()) {
+                logger.info("Authy is not enabled. Returning false.");
+            }
+            return false;
+        }
+
+        Optional<Long> id = Optional.ofNullable(authyCache.getIfPresent(uuid));
+        if (!id.isPresent()) {
+            synchronized (authyCacheLock) {
+                id = Optional.ofNullable(authyCache.getIfPresent(uuid));
+                if (!id.isPresent()) {
+                    id = authyExpensive(uuid);
+                    if (id.isPresent()) {
+                        authyCache.put(uuid, id.get());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return id.isPresent();
     }
 
     public boolean hasTOTP(UUID uuid) throws APIException {
@@ -693,7 +788,21 @@ public class InternalAPI {
             logger.info("Getting TOTP status for " + uuid);
         }
 
-        return totpCache.get(uuid, k -> getTOTPExpensive(uuid)) != null;
+        Optional<TOTPCacheData> data = Optional.ofNullable(totpCache.getIfPresent(uuid));
+        if (!data.isPresent()) {
+            synchronized (totpCacheLock) {
+                data = Optional.ofNullable(totpCache.getIfPresent(uuid));
+                if (!data.isPresent()) {
+                    data = totpExpensive(uuid);
+                    if (data.isPresent()) {
+                        totpCache.put(uuid, data.get());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return data.isPresent();
     }
 
     public boolean hasHOTP(UUID uuid) throws APIException {
@@ -706,242 +815,30 @@ public class InternalAPI {
             logger.info("Getting HOTP status for " + uuid);
         }
 
-        return hotpCache.get(uuid, k -> getHOTPExpensive(uuid)) != null;
+        Optional<HOTPCacheData> data = Optional.ofNullable(hotpCache.getIfPresent(uuid));
+        if (!data.isPresent()) {
+            synchronized (hotpCacheLock) {
+                data = Optional.ofNullable(hotpCache.getIfPresent(uuid));
+                if (!data.isPresent()) {
+                    data = hotpExpensive(uuid);
+                    if (data.isPresent()) {
+                        hotpCache.put(uuid, data.get());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return data.isPresent();
     }
 
     public boolean isRegistered(UUID uuid) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Getting registration status for " + uuid);
-        }
-
         return hasAuthy(uuid)
                 || hasTOTP(uuid)
                 || hasHOTP(uuid);
     }
 
-    private TOTPCacheData getTOTPExpensive(UUID uuid) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Getting TOTP for " + uuid);
-        }
-
-        // Redis
-        try {
-            TOTPCacheData result = Redis.getTOTP(uuid).get();
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " found in Redis. Value: " + result);
-                }
-                return result;
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        // SQL
-        try {
-            TOTPData result = null;
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.getTOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.getTOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            }
-
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " found in storage. Value: " + result);
-                }
-                // Update messaging/Redis, force same-thread
-                Redis.update(result).get();
-                RabbitMQ.broadcast(result, getRabbitConnection()).get();
-                return new TOTPCacheData(result.getLength(), result.getKey());
-            }
-        } catch (ExecutionException | IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        return null;
-    }
-
-    private HOTPCacheData getHOTPExpensive(UUID uuid) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Getting HOTP for " + uuid);
-        }
-
-        // Redis
-        try {
-            HOTPCacheData result = Redis.getHOTP(uuid).get();
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " found in Redis. Value: " + result);
-                }
-                return result;
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        // SQL
-        try {
-            HOTPData result = null;
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.getHOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.getHOTPData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            }
-
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " found in storage. Value: " + result);
-                }
-                // Update messaging/Redis, force same-thread
-                Redis.update(result).get();
-                RabbitMQ.broadcast(result, getRabbitConnection()).get();
-                return new HOTPCacheData(result.getLength(), result.getCounter(), result.getKey());
-            }
-        } catch (ExecutionException | IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        return null;
-    }
-
-    private long getAuthyExpensive(UUID uuid) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Getting Authy ID for " + uuid);
-        }
-
-        // Redis
-        try {
-            Long result = Redis.getAuthy(uuid).get();
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " found in Redis. Value: " + result);
-                }
-                return result;
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        // SQL
-        try {
-            AuthyData result = null;
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.getAuthyData(uuid, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            }
-
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " found in storage. Value: " + result);
-                }
-                // Update messaging/Redis, force same-thread
-                Redis.update(result).get();
-                RabbitMQ.broadcast(result, getRabbitConnection()).get();
-                return result.getID();
-            }
-        } catch (ExecutionException | IOException | TimeoutException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        return -1L;
-    }
-
-    public static void setLogin(UUID uuid, String ip) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Setting login for " + uuid + " (" + ip + ")");
-        }
-
-        // SQL
-        LoginData result = null;
-        try {
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.updateLogin(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, ip).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.updateLogin(ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode(), uuid, ip).get();
-            }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
-        }
-
-        if (result == null) {
-            return;
-        }
-
-        // Redis
-        Redis.update(result, ConfigUtil.getIPTime());
-
-        // RabbitMQ
-        try {
-            RabbitMQ.broadcast(result, ConfigUtil.getIPTime(), getRabbitConnection());
-        } catch (IOException | TimeoutException e) {
-            logger.error(e.getMessage(), e);
-        }
-
-        loginCache.put(new ObjectObjectPair<>(uuid, ip), Boolean.TRUE);
-    }
-
-    public static boolean getLogin(UUID uuid, String ip, long ipTime) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (cachedConfig.get().getDebug()) {
-            logger.info("Getting login for " + uuid + " (" + ip + ")");
-        }
-
-        return loginCache.get(new ObjectObjectPair<>(uuid, ip), k -> getLoginExpensive(uuid, ip, ipTime));
-    }
-
-    private static boolean getLoginExpensive(UUID uuid, String ip, long ipTime) throws APIException {
+    private static boolean loginExpensive(UUID uuid, String ip) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
@@ -952,46 +849,172 @@ public class InternalAPI {
         }
 
         // Redis
-        try {
-            Boolean result = Redis.getLogin(uuid, ip).get();
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " " + ip + " found in Redis. Value: " + result);
-                }
-                return result;
+        Optional<Boolean> redisResult = Redis.getLogin(uuid, ip);
+        if (redisResult.isPresent()) {
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info(uuid + " (" + ip + ") login found in Redis. Value: " + redisResult.get());
             }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
+            return redisResult.get();
         }
 
         // SQL
         try {
-            LoginData result = null;
-            if (ConfigUtil.getSQLType() == SQLType.MySQL) {
-                result = MySQL.getLoginData(uuid, ip, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
-            } else if (ConfigUtil.getSQLType() == SQLType.SQLite) {
-                result = SQLite.getLoginData(uuid, ip, ConfigUtil.getSQL(), ConfigUtil.getStorageConfigNode()).get();
+            Optional<LoginData> result = Optional.empty();
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                result = MySQL.getLoginData(uuid, ip);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                result = SQLite.getLoginData(uuid, ip);
             }
 
-            if (result != null) {
-                if (cachedConfig.get().getDebug()) {
-                    logger.info(uuid + " " + ip + " found in storage. Value: " + result);
+            if (result.isPresent()) {
+                if (ConfigUtil.getDebugOrFalse()) {
+                    logger.info(uuid + " (" + ip + ") login found in storage. Value: " + result.get());
                 }
-                // Update messaging/Redis, force same-thread
-                Redis.update(result, ipTime).get();
-                RabbitMQ.broadcast(result, ipTime, getRabbitConnection()).get();
-                return true;
+                // Update messaging/Redis
+                Redis.update(result.get());
+                RabbitMQ.broadcast(result.get());
+                return result.get().getCreated() - System.currentTimeMillis() < cachedConfig.get().getIPCacheTime();
             }
-        } catch (ExecutionException | IOException | TimeoutException ex) {
+        } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
+            throw new APIException(true, ex);
         }
 
         return false;
+    }
+
+    private Optional<TOTPCacheData> totpExpensive(UUID uuid) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Getting TOTP for " + uuid);
+        }
+
+        // Redis
+        Optional<TOTPData> redisResult = Redis.getTOTP(uuid);
+        if (redisResult.isPresent()) {
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info(uuid + " TOTP found in Redis. Value: " + redisResult.get());
+            }
+            return Optional.of(new TOTPCacheData(redisResult.get().getLength(), redisResult.get().getKey()));
+        }
+
+        // SQL
+        try {
+            Optional<TOTPData> result = Optional.empty();
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                result = MySQL.getTOTPData(uuid);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                result = SQLite.getTOTPData(uuid);
+            }
+
+            if (result.isPresent()) {
+                if (ConfigUtil.getDebugOrFalse()) {
+                    logger.info(uuid + " TOTP found in storage. Value: " + result.get());
+                }
+                // Update messaging/Redis
+                Redis.update(result.get());
+                RabbitMQ.broadcast(result.get());
+                return Optional.of(new TOTPCacheData(result.get().getLength(), result.get().getKey()));
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<HOTPCacheData> hotpExpensive(UUID uuid) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Getting HOTP for " + uuid);
+        }
+
+        // Redis
+        Optional<HOTPData> redisResult = Redis.getHOTP(uuid);
+        if (redisResult.isPresent()) {
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info(uuid + " HOTP found in Redis. Value: " + redisResult.get());
+            }
+            return Optional.of(new HOTPCacheData(redisResult.get().getLength(), redisResult.get().getCounter(), redisResult.get().getKey()));
+        }
+
+        // SQL
+        try {
+            Optional<HOTPData> result = Optional.empty();
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                result = MySQL.getHOTPData(uuid);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                result = SQLite.getHOTPData(uuid);
+            }
+
+            if (result.isPresent()) {
+                if (ConfigUtil.getDebugOrFalse()) {
+                    logger.info(uuid + " HOTP found in storage. Value: " + result.get());
+                }
+                // Update messaging/Redis
+                Redis.update(result.get());
+                RabbitMQ.broadcast(result.get());
+                return Optional.of(new HOTPCacheData(result.get().getLength(), result.get().getCounter(), result.get().getKey()));
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<Long> authyExpensive(UUID uuid) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        if (cachedConfig.get().getDebug()) {
+            logger.info("Getting Authy ID for " + uuid);
+        }
+
+        // Redis
+        Optional<Long> redisResult = Redis.getAuthy(uuid);
+        if (redisResult.isPresent()) {
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info(uuid + " Authy found in Redis. Value: " + redisResult.get());
+            }
+            return redisResult;
+        }
+
+        // SQL
+        try {
+            Optional<AuthyData> result = Optional.empty();
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                result = MySQL.getAuthyData(uuid);
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                result = SQLite.getAuthyData(uuid);
+            }
+
+            if (result.isPresent()) {
+                if (ConfigUtil.getDebugOrFalse()) {
+                    logger.info(uuid + " Authy found in storage. Value: " + result.get());
+                }
+                // Update messaging/Redis
+                Redis.update(result.get());
+                RabbitMQ.broadcast(result.get());
+                return Optional.of(result.get().getID());
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        return Optional.empty();
     }
 }

@@ -1,10 +1,16 @@
 package me.egg82.tfaplus.utils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import me.egg82.tfaplus.core.SQLFetchResult;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
-import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.extended.RabbitMQReceiver;
 import me.egg82.tfaplus.extended.RedisSubscriber;
 import me.egg82.tfaplus.services.Redis;
@@ -15,10 +21,6 @@ import ninja.egg82.service.ServiceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.*;
-
 public class ServiceUtil {
     private static final Logger logger = LoggerFactory.getLogger(ServiceUtil.class);
 
@@ -26,9 +28,7 @@ public class ServiceUtil {
 
     private ServiceUtil() {}
 
-    public static void registerRedis() {
-        workPool.submit(RedisSubscriber::new);
-    }
+    public static void registerRedis() { workPool.submit(RedisSubscriber::new); }
 
     public static void unregisterRedis() {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
@@ -41,14 +41,7 @@ public class ServiceUtil {
         }
     }
 
-    public static void registerRabbit() {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            return;
-        }
-
-        ServiceLocator.register(new RabbitMQReceiver(cachedConfig.get().getRabbitConnectionFactory()));
-    }
+    public static void registerRabbit() { ServiceLocator.register(new RabbitMQReceiver()); }
 
     public static void unregisterRabbit() {
         RabbitMQReceiver rabbitReceiver;
@@ -61,31 +54,29 @@ public class ServiceUtil {
 
         try {
             rabbitReceiver.close();
-        } catch (IOException | TimeoutException ignored) {}
+        } catch (IOException | TimeoutException ignored) { }
     }
 
     public static void registerSQL() {
-        Optional<Configuration> config = ConfigUtil.getConfig();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!config.isPresent() || !cachedConfig.isPresent()) {
+        if (!cachedConfig.isPresent()) {
             return;
         }
 
-        if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-            MySQL.createTables(cachedConfig.get().getSQL(), config.get().getNode("storage")).thenRun(() ->
-                    MySQL.loadInfo(cachedConfig.get().getSQL(), config.get().getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.get().getIPTime());
-                        workPool.submit(ServiceUtil::updateSQL);
-                    })
-            );
-        } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-            SQLite.createTables(cachedConfig.get().getSQL(), config.get().getNode("storage")).thenRun(() ->
-                    SQLite.loadInfo(cachedConfig.get().getSQL(), config.get().getNode("storage")).thenAccept(v -> {
-                        Redis.updateFromQueue(v, cachedConfig.get().getIPTime());
-                        workPool.submit(ServiceUtil::updateSQL);
-                    })
-            );
+        try {
+            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
+                MySQL.createTables();
+                Redis.updateFromQueue(MySQL.loadInfo());
+            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+                SQLite.createTables();
+                Redis.updateFromQueue(SQLite.loadInfo());
+            }
+        } catch (APIException | SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            return;
         }
+
+        workPool.submit(ServiceUtil::updateSQL);
     }
 
     private static void updateSQL() {
@@ -95,27 +86,20 @@ public class ServiceUtil {
             Thread.currentThread().interrupt();
         }
 
-        Optional<Configuration> config = ConfigUtil.getConfig();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!config.isPresent() || !cachedConfig.isPresent()) {
+        if (!cachedConfig.isPresent()) {
             return;
         }
 
-        SQLFetchResult result = null;
-
         try {
             if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                result = MySQL.fetchQueue(cachedConfig.get().getSQL(), config.get().getNode("storage")).get();
+                Redis.updateFromQueue(MySQL.fetchQueue());
             }
-
-            if (result != null) {
-                Redis.updateFromQueue(result, cachedConfig.get().getIPTime()).get();
+        } catch (APIException | SQLException ex) {
+            if (!ex.getMessage().endsWith("has been closed.")) {
+                logger.error(ex.getMessage(), ex);
             }
-        } catch (ExecutionException ex) {
-            logger.error(ex.getMessage(), ex);
-        } catch (InterruptedException ex) {
-            logger.error(ex.getMessage(), ex);
-            Thread.currentThread().interrupt();
+            return;
         }
 
         workPool.submit(ServiceUtil::updateSQL);
@@ -130,9 +114,7 @@ public class ServiceUtil {
         cachedConfig.get().getSQL().close();
     }
 
-    public static void registerWorkPool() {
-        workPool = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setNameFormat("2FAPlus-Service-%d").build());
-    }
+    public static void registerWorkPool() { workPool = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setNameFormat("2FAPlus-Service-%d").build()); }
 
     public static void unregisterWorkPool() {
         if (!workPool.isShutdown()) {

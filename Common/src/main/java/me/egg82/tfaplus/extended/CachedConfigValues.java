@@ -3,6 +3,9 @@ package me.egg82.tfaplus.extended;
 import com.authy.AuthyApiClient;
 import com.google.common.collect.ImmutableSet;
 import com.rabbitmq.client.ConnectionFactory;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import me.egg82.tfaplus.core.FreezeConfigContainer;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.services.InternalAPI;
@@ -10,21 +13,17 @@ import ninja.egg82.sql.SQL;
 import ninja.egg82.tuples.longs.LongObjectPair;
 import redis.clients.jedis.JedisPool;
 
-import java.util.Collection;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
 public class CachedConfigValues {
     private CachedConfigValues() {}
 
     private boolean debug = false;
     public boolean getDebug() { return debug; }
 
-    private LongObjectPair<TimeUnit> ipTime = new LongObjectPair<>(30L, TimeUnit.DAYS);
-    public long getIPTime() { return ipTime.getSecond().toMillis(ipTime.getFirst()); }
+    private LongObjectPair<TimeUnit> ipCacheTime = new LongObjectPair<>(30L, TimeUnit.DAYS);
+    public long getIPCacheTime() { return ipCacheTime.getSecond().toMillis(ipCacheTime.getFirst()); }
 
-    private LongObjectPair<TimeUnit> verificationTime = new LongObjectPair<>(3L, TimeUnit.MINUTES);
-    public long getVerificationTime() { return verificationTime.getSecond().toMillis(verificationTime.getFirst()); }
+    private LongObjectPair<TimeUnit> verificationCacheTime = new LongObjectPair<>(3L, TimeUnit.MINUTES);
+    public long getVerificationCacheTime() { return verificationCacheTime.getSecond().toMillis(verificationCacheTime.getFirst()); }
 
     private ImmutableSet<String> commands = ImmutableSet.of();
     public ImmutableSet<String> getCommands() { return commands; }
@@ -53,8 +52,8 @@ public class CachedConfigValues {
     private SQLType sqlType = SQLType.SQLite;
     public SQLType getSQLType() { return sqlType; }
 
-    private Optional<AuthyApiClient> authy = null;
-    public Optional<AuthyApiClient> getAuthy() { return authy; }
+    private AuthyApiClient authy = null;
+    public Optional<AuthyApiClient> getAuthy() { return Optional.ofNullable(authy); }
 
     public static CachedConfigValues.Builder builder() { return new CachedConfigValues.Builder(); }
 
@@ -68,21 +67,21 @@ public class CachedConfigValues {
             return this;
         }
 
-        public CachedConfigValues.Builder ipTime(long value, TimeUnit unit) {
+        public CachedConfigValues.Builder ipCacheTime(long value, TimeUnit unit) {
             if (value <= 0L) {
                 throw new IllegalArgumentException("value cannot be <= 0.");
             }
 
-            values.ipTime = new LongObjectPair<>(value, unit);
+            values.ipCacheTime = new LongObjectPair<>(value, unit);
             return this;
         }
 
-        public CachedConfigValues.Builder verificationTime(long value, TimeUnit unit) {
+        public CachedConfigValues.Builder verificationCacheTime(long value, TimeUnit unit) {
             if (value <= 0L) {
                 throw new IllegalArgumentException("value cannot be <= 0.");
             }
 
-            values.verificationTime = new LongObjectPair<>(value, unit);
+            values.verificationCacheTime = new LongObjectPair<>(value, unit);
             return this;
         }
 
@@ -146,7 +145,7 @@ public class CachedConfigValues {
             return this;
         }
 
-        public CachedConfigValues.Builder authy(Optional<AuthyApiClient> value) {
+        public CachedConfigValues.Builder authy(AuthyApiClient value) {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
@@ -155,7 +154,7 @@ public class CachedConfigValues {
         }
 
         public CachedConfigValues build() {
-            InternalAPI.changeVerificationTime(values.verificationTime.getFirst(), values.verificationTime.getSecond());
+            InternalAPI.changeVerificationTime(values.verificationCacheTime.getFirst(), values.verificationCacheTime.getSecond());
             return values;
         }
     }

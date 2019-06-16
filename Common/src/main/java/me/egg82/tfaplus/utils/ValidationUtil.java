@@ -1,8 +1,7 @@
 package me.egg82.tfaplus.utils;
 
-import org.apache.commons.validator.routines.InetAddressValidator;
-
 import java.util.regex.Pattern;
+import org.apache.commons.validator.routines.InetAddressValidator;
 
 public class ValidationUtil {
     /**

@@ -1,5 +1,8 @@
 package me.egg82.tfaplus.extended;
 
+import java.util.Base64;
+import java.util.UUID;
+import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.core.AuthyData;
 import me.egg82.tfaplus.core.HOTPData;
 import me.egg82.tfaplus.core.LoginData;
@@ -16,9 +19,6 @@ import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.exceptions.JedisException;
-
-import java.util.Base64;
-import java.util.UUID;
 
 public class RedisSubscriber {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -60,7 +60,7 @@ public class RedisSubscriber {
                     }
 
                     InternalAPI.add(new LoginData(uuid, ip, created));
-                } catch (ParseException | ClassCastException | NullPointerException ex) {
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-authy")) {
@@ -76,7 +76,7 @@ public class RedisSubscriber {
                     }
 
                     InternalAPI.add(new AuthyData(uuid, i));
-                } catch (ParseException | ClassCastException | NullPointerException ex) {
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-totp")) {
@@ -93,7 +93,7 @@ public class RedisSubscriber {
                     }
 
                     InternalAPI.add(new TOTPData(uuid, length, key));
-                } catch (ParseException | ClassCastException | NullPointerException ex) {
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-hotp")) {
@@ -111,12 +111,22 @@ public class RedisSubscriber {
                     }
 
                     InternalAPI.add(new HOTPData(uuid, length, counter, key));
-                } catch (ParseException | ClassCastException | NullPointerException ex) {
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
             } else if (channel.equals("2faplus-delete")) {
                 // In this case, the message is the "UUID"
-                InternalAPI.delete(message);
+
+                if (!ValidationUtil.isValidUuid(message)) {
+                    logger.warn("non-valid UUID sent through Redis pub/sub");
+                    return;
+                }
+
+                try {
+                    InternalAPI.delete(UUID.fromString(message));
+                } catch (APIException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
             }
         }
     }

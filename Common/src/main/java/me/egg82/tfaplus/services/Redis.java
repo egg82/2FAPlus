@@ -1,7 +1,14 @@
 package me.egg82.tfaplus.services;
 
+import java.util.Base64;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import javax.crypto.spec.SecretKeySpec;
 import me.egg82.tfaplus.core.*;
+import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.ServiceKeys;
+import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.RedisUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.analytics.utils.JSONUtil;
@@ -11,12 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisException;
-
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 public class Redis {
     private static final Logger logger = LoggerFactory.getLogger(Redis.class);
@@ -29,393 +30,380 @@ public class Redis {
 
     private Redis() {}
 
-    public static CompletableFuture<Boolean> updateFromQueue(SQLFetchResult sqlResult, long ipTime) {
-        return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis == null) {
-                    return Boolean.FALSE;
-                }
+    public static void updateFromQueue(SQLFetchResult sqlResult) {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            return;
+        }
 
-                for (String key : sqlResult.getRemovedKeys()) {
-                    redis.del(key);
-                    if (key.indexOf('|') == -1 && ValidationUtil.isValidUuid(key.substring(key.lastIndexOf(':') + 1))) {
-                        redis.publish("2faplus-delete", key.substring(key.lastIndexOf(':') + 1));
-                    }
-                }
-
-                for (LoginData result : sqlResult.getLoginData()) {
-                    String key = "2faplus:login:" + result.getUUID() + "|" + result.getIP();
-                    int offset = (int) Math.floorDiv((ipTime + result.getCreated()) - System.currentTimeMillis(), 1000L);
-                    if (offset > 0) {
-                        redis.setex(key, offset, String.valueOf(Boolean.TRUE));
-                    } else {
-                        redis.del(key);
-                    }
-
-                    String ipKey = "2faplus:ip:" + result.getIP();
-                    if (offset > 0) {
-                        redis.sadd(ipKey, result.getUUID().toString());
-                    } else {
-                        redis.srem(ipKey, result.getUUID().toString());
-                    }
-
-                    String uuidKey = "2faplus:uuid:" + result.getUUID();
-                    if (offset > 0) {
-                        redis.sadd(uuidKey, result.getIP());
-                    } else {
-                        redis.srem(uuidKey, result.getIP());
-                    }
-
-                    if (offset > 0) {
-                        JSONObject obj = new JSONObject();
-                        obj.put("uuid", result.getUUID().toString());
-                        obj.put("ip", result.getIP());
-                        obj.put("created", result.getCreated());
-                        obj.put("id", serverId.toString());
-                        redis.publish("2faplus-login", obj.toJSONString());
-                    } else {
-                        redis.publish("2faplus-delete", result.getUUID().toString());
-                    }
-                }
-
-                for (AuthyData result : sqlResult.getAuthyData()) {
-                    String key = "2faplus:authy:" + result.getUUID();
-                    redis.set(key, String.valueOf(result.getID()));
-
-                    JSONObject obj = new JSONObject();
-                    obj.put("uuid", result.getUUID().toString());
-                    obj.put("i", result.getID());
-                    obj.put("id", serverId.toString());
-                    redis.publish("2faplus-authy", obj.toJSONString());
-                }
-
-                for (TOTPData result : sqlResult.getTOTPData()) {
-                    String key = "2faplus:totp:" + result.getUUID();
-
-                    JSONObject obj = new JSONObject();
-                    obj.put("length", result.getLength());
-                    obj.put("key", encoder.encodeToString(result.getKey().getEncoded()));
-                    redis.set(key, obj.toJSONString());
-
-                    obj.put("uuid", result.getUUID().toString());
-                    obj.put("id", serverId.toString());
-                    redis.publish("2faplus-totp", obj.toJSONString());
-                }
-
-                for (HOTPData result : sqlResult.getHOTPData()) {
-                    String key = "2faplus:hotp:" + result.getUUID();
-
-                    JSONObject obj = new JSONObject();
-                    obj.put("length", result.getLength());
-                    obj.put("counter", result.getCounter());
-                    obj.put("key", encoder.encodeToString(result.getKey().getEncoded()));
-                    redis.set(key, obj.toJSONString());
-
-                    obj.put("uuid", result.getUUID().toString());
-                    obj.put("id", serverId.toString());
-                    redis.publish("2faplus-hotp", obj.toJSONString());
-                }
-
-                return Boolean.TRUE;
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis == null) {
+                return;
             }
 
-            return Boolean.FALSE;
-        });
-    }
-
-    public static CompletableFuture<Boolean> update(LoginData sqlResult, long ipTime) {
-        return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis == null) {
-                    return Boolean.FALSE;
+            for (String key : sqlResult.getRemovedKeys()) {
+                redis.del(key);
+                if (key.indexOf('|') == -1 && ValidationUtil.isValidUuid(key.substring(key.lastIndexOf(':') + 1))) {
+                    redis.publish("2faplus-delete", key.substring(key.lastIndexOf(':') + 1));
                 }
+            }
 
-                String key = "2faplus:login:" + sqlResult.getUUID() + "|" + sqlResult.getIP();
-                int offset = (int) Math.floorDiv((ipTime + sqlResult.getCreated()) - System.currentTimeMillis(), 1000L);
-                if (offset > 0) {
-                    redis.setex(key, offset, String.valueOf(Boolean.TRUE));
+            for (LoginData result : sqlResult.getLoginData()) {
+                String key = "2faplus:login:" + result.getUUID() + "|" + result.getIP();
+                int offset = (int) Math.floorDiv(result.getCreated() - System.currentTimeMillis(), 1000L);
+                int cacheTime = (int) Math.floorDiv(cachedConfig.get().getIPCacheTime(), 1000L);
+                if (offset < cacheTime) {
+                    redis.setex(key, offset - cacheTime, String.valueOf(Boolean.TRUE));
                 } else {
                     redis.del(key);
                 }
 
-                String ipKey = "2faplus:ip:" + sqlResult.getIP();
-                if (offset > 0) {
-                    redis.sadd(ipKey, sqlResult.getUUID().toString());
+                String ipKey = "2faplus:ip:" + result.getIP();
+                if (offset < cacheTime) {
+                    redis.sadd(ipKey, result.getUUID().toString());
                 } else {
-                    redis.srem(ipKey, sqlResult.getUUID().toString());
+                    redis.srem(ipKey, result.getUUID().toString());
                 }
 
-                String uuidKey = "2faplus:uuid:" + sqlResult.getUUID();
-                if (offset > 0) {
-                    redis.sadd(uuidKey, sqlResult.getIP());
+                String uuidKey = "2faplus:uuid:" + result.getUUID();
+                if (offset < cacheTime) {
+                    redis.sadd(uuidKey, result.getIP());
                 } else {
-                    redis.srem(uuidKey, sqlResult.getIP());
+                    redis.srem(uuidKey, result.getIP());
                 }
 
-                if (offset > 0) {
+                if (offset < cacheTime) {
                     JSONObject obj = new JSONObject();
-                    obj.put("uuid", sqlResult.getUUID().toString());
-                    obj.put("ip", sqlResult.getIP());
-                    obj.put("created", sqlResult.getCreated());
+                    obj.put("uuid", result.getUUID().toString());
+                    obj.put("ip", result.getIP());
+                    obj.put("created", result.getCreated());
                     obj.put("id", serverId.toString());
                     redis.publish("2faplus-login", obj.toJSONString());
                 } else {
-                    redis.publish("2faplus-delete", sqlResult.getUUID().toString());
+                    redis.publish("2faplus-delete", result.getUUID().toString());
                 }
-
-                return Boolean.TRUE;
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
 
-            return Boolean.FALSE;
-        });
-    }
-
-    public static CompletableFuture<Boolean> update(AuthyData sqlResult) {
-        return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis == null) {
-                    return Boolean.FALSE;
-                }
-
-                String key = "2faplus:authy:" + sqlResult.getUUID();
-                redis.set(key, String.valueOf(sqlResult.getID()));
+            for (AuthyData result : sqlResult.getAuthyData()) {
+                String key = "2faplus:authy:" + result.getUUID();
+                redis.set(key, String.valueOf(result.getID()));
 
                 JSONObject obj = new JSONObject();
-                obj.put("uuid", sqlResult.getUUID().toString());
-                obj.put("i", sqlResult.getID());
+                obj.put("uuid", result.getUUID().toString());
+                obj.put("i", result.getID());
                 obj.put("id", serverId.toString());
                 redis.publish("2faplus-authy", obj.toJSONString());
-
-                return Boolean.TRUE;
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
 
-            return Boolean.FALSE;
-        });
-    }
-
-    public static CompletableFuture<Boolean> update(TOTPData sqlResult) {
-        return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis == null) {
-                    return Boolean.FALSE;
-                }
-
-                String key = "2faplus:totp:" + sqlResult.getUUID();
+            for (TOTPData result : sqlResult.getTOTPData()) {
+                String key = "2faplus:totp:" + result.getUUID();
 
                 JSONObject obj = new JSONObject();
-                obj.put("length", sqlResult.getLength());
-                obj.put("key", encoder.encodeToString(sqlResult.getKey().getEncoded()));
+                obj.put("length", result.getLength());
+                obj.put("key", encoder.encodeToString(result.getKey().getEncoded()));
                 redis.set(key, obj.toJSONString());
 
-                obj.put("uuid", sqlResult.getUUID().toString());
+                obj.put("uuid", result.getUUID().toString());
                 obj.put("id", serverId.toString());
                 redis.publish("2faplus-totp", obj.toJSONString());
-
-                return Boolean.TRUE;
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
 
-            return Boolean.FALSE;
-        });
-    }
-
-    public static CompletableFuture<Boolean> update(HOTPData sqlResult) {
-        return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis == null) {
-                    return Boolean.FALSE;
-                }
-
-                String key = "2faplus:hotp:" + sqlResult.getUUID();
+            for (HOTPData result : sqlResult.getHOTPData()) {
+                String key = "2faplus:hotp:" + result.getUUID();
 
                 JSONObject obj = new JSONObject();
-                obj.put("length", sqlResult.getLength());
-                obj.put("counter", sqlResult.getCounter());
-                obj.put("key", encoder.encodeToString(sqlResult.getKey().getEncoded()));
+                obj.put("length", result.getLength());
+                obj.put("counter", result.getCounter());
+                obj.put("key", encoder.encodeToString(result.getKey().getEncoded()));
                 redis.set(key, obj.toJSONString());
 
-                obj.put("uuid", sqlResult.getUUID().toString());
+                obj.put("uuid", result.getUUID().toString());
                 obj.put("id", serverId.toString());
                 redis.publish("2faplus-hotp", obj.toJSONString());
-
-                return Boolean.TRUE;
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
-
-            return Boolean.FALSE;
-        });
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
     }
 
-    public static CompletableFuture<Boolean> delete(String ip) {
-        return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis == null) {
-                    return Boolean.FALSE;
+    public static void update(LoginData sqlResult) {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            return;
+        }
+
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis == null) {
+                return;
+            }
+
+            String key = "2faplus:login:" + sqlResult.getUUID() + "|" + sqlResult.getIP();
+            int offset = (int) Math.floorDiv(sqlResult.getCreated() - System.currentTimeMillis(), 1000L);
+            int cacheTime = (int) Math.floorDiv(cachedConfig.get().getIPCacheTime(), 1000L);
+            if (offset < cacheTime) {
+                redis.setex(key, offset - cacheTime, String.valueOf(Boolean.TRUE));
+            } else {
+                redis.del(key);
+            }
+
+            String ipKey = "2faplus:ip:" + sqlResult.getIP();
+            if (offset < cacheTime) {
+                redis.sadd(ipKey, sqlResult.getUUID().toString());
+            } else {
+                redis.srem(ipKey, sqlResult.getUUID().toString());
+            }
+
+            String uuidKey = "2faplus:uuid:" + sqlResult.getUUID();
+            if (offset < cacheTime) {
+                redis.sadd(uuidKey, sqlResult.getIP());
+            } else {
+                redis.srem(uuidKey, sqlResult.getIP());
+            }
+
+            if (offset < cacheTime) {
+                JSONObject obj = new JSONObject();
+                obj.put("uuid", sqlResult.getUUID().toString());
+                obj.put("ip", sqlResult.getIP());
+                obj.put("created", sqlResult.getCreated());
+                obj.put("id", serverId.toString());
+                redis.publish("2faplus-login", obj.toJSONString());
+            } else {
+                redis.publish("2faplus-delete", sqlResult.getUUID().toString());
+            }
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+    }
+
+    public static void update(AuthyData sqlResult) {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            return;
+        }
+
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis == null) {
+                return;
+            }
+
+            String key = "2faplus:authy:" + sqlResult.getUUID();
+            redis.set(key, String.valueOf(sqlResult.getID()));
+
+            JSONObject obj = new JSONObject();
+            obj.put("uuid", sqlResult.getUUID().toString());
+            obj.put("i", sqlResult.getID());
+            obj.put("id", serverId.toString());
+            redis.publish("2faplus-authy", obj.toJSONString());
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+    }
+
+    public static void update(TOTPData sqlResult) {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            return;
+        }
+
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis == null) {
+                return;
+            }
+
+            String key = "2faplus:totp:" + sqlResult.getUUID();
+
+            JSONObject obj = new JSONObject();
+            obj.put("length", sqlResult.getLength());
+            obj.put("key", encoder.encodeToString(sqlResult.getKey().getEncoded()));
+            redis.set(key, obj.toJSONString());
+
+            obj.put("uuid", sqlResult.getUUID().toString());
+            obj.put("id", serverId.toString());
+            redis.publish("2faplus-totp", obj.toJSONString());
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+    }
+
+    public static void update(HOTPData sqlResult) {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            return;
+        }
+
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis == null) {
+                return;
+            }
+
+            String key = "2faplus:hotp:" + sqlResult.getUUID();
+
+            JSONObject obj = new JSONObject();
+            obj.put("length", sqlResult.getLength());
+            obj.put("counter", sqlResult.getCounter());
+            obj.put("key", encoder.encodeToString(sqlResult.getKey().getEncoded()));
+            redis.set(key, obj.toJSONString());
+
+            obj.put("uuid", sqlResult.getUUID().toString());
+            obj.put("id", serverId.toString());
+            redis.publish("2faplus-hotp", obj.toJSONString());
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+    }
+
+    public static void delete(String ip) {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            return;
+        }
+
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis == null) {
+                return;
+            }
+
+            String ipKey = "2faplus:ip:" + ip;
+
+            Set<String> data = redis.smembers(ipKey);
+            if (data != null) {
+                for (String uuid : data) {
+                    String uuidKey = "2faplus:uuid:" + uuid;
+                    String loginKey = "2faplus:login:" + uuid + "|" + ip;
+                    String authyKey = "2faplus:authy:" + uuid;
+                    String totpKey = "2faplus:totp:" + uuid;
+                    String hotpKey = "2faplus:hotp:" + uuid;
+                    redis.del(loginKey);
+                    redis.del(authyKey);
+                    redis.del(totpKey);
+                    redis.del(hotpKey);
+                    redis.srem(uuidKey, ip);
+
+                    redis.publish("2faplus-delete", uuid);
                 }
+            }
+            redis.del(ipKey);
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+    }
 
-                String ipKey = "2faplus:ip:" + ip;
+    public static void delete(UUID uuid) {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            return;
+        }
 
-                Set<String> data = redis.smembers(ipKey);
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis == null) {
+                return;
+            }
+
+            String uuidKey = "2faplus:uuid:" + uuid;
+
+            Set<String> data = redis.smembers(uuidKey);
+            if (data != null) {
+                for (String ip : data) {
+                    String ipKey = "2faplus:ip:" + ip;
+                    String loginKey = "2faplus:login:" + uuid + "|" + ip;
+                    redis.del(loginKey);
+                    redis.srem(ipKey, uuid.toString());
+                }
+            }
+            redis.del(uuidKey);
+
+            String authyKey = "2faplus:authy:" + uuid;
+            String totpKey = "2faplus:totp:" + uuid;
+            String hotpKey = "2faplus:hotp:" + uuid;
+            redis.del(authyKey);
+            redis.del(totpKey);
+            redis.del(hotpKey);
+
+            redis.publish("2faplus-delete", uuid.toString());
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+    }
+
+    public static Optional<Boolean> getLogin(UUID uuid, String ip) {
+        Boolean result = null;
+
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis != null) {
+                String key = "2faplus:login:" + uuid + "|" + ip;
+
+                // Grab info
+                String data = redis.get(key);
                 if (data != null) {
-                    for (String uuid : data) {
-                        String uuidKey = "2faplus:uuid:" + uuid;
-                        String loginKey = "2faplus:login:" + uuid + "|" + ip;
-                        String authyKey = "2faplus:authy:" + uuid;
-                        String totpKey = "2faplus:totp:" + uuid;
-                        String hotpKey = "2faplus:hotp:" + uuid;
-                        redis.del(loginKey);
-                        redis.del(authyKey);
-                        redis.del(totpKey);
-                        redis.del(hotpKey);
-                        redis.srem(uuidKey, ip);
-
-                        redis.publish("2faplus-delete", uuid);
-                    }
+                    result = Boolean.valueOf(data);
                 }
-                redis.del(ipKey);
-
-                return Boolean.TRUE;
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
 
-            return Boolean.FALSE;
-        });
+        return Optional.ofNullable(result);
     }
 
-    public static CompletableFuture<Boolean> delete(UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis == null) {
-                    return Boolean.FALSE;
-                }
+    public static Optional<Long> getAuthy(UUID uuid) {
+        Long result = null;
 
-                String uuidKey = "2faplus:uuid:" + uuid;
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis != null) {
+                String key = "2faplus:authy:" + uuid;
 
-                Set<String> data = redis.smembers(uuidKey);
+                // Grab info
+                String data = redis.get(key);
                 if (data != null) {
-                    for (String ip : data) {
-                        String ipKey = "2faplus:ip:" + ip;
-                        String loginKey = "2faplus:login:" + uuid + "|" + ip;
-                        redis.del(loginKey);
-                        redis.srem(ipKey, uuid.toString());
-                    }
+                    result = Long.valueOf(data);
                 }
-                redis.del(uuidKey);
-
-                String authyKey = "2faplus:authy:" + uuid;
-                String totpKey = "2faplus:totp:" + uuid;
-                String hotpKey = "2faplus:hotp:" + uuid;
-                redis.del(authyKey);
-                redis.del(totpKey);
-                redis.del(hotpKey);
-
-                redis.publish("2faplus-delete", uuid.toString());
-
-                return Boolean.TRUE;
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
 
-            return Boolean.FALSE;
-        });
+        return Optional.ofNullable(result);
     }
 
-    public static CompletableFuture<Boolean> getLogin(UUID uuid, String ip) {
-        return CompletableFuture.supplyAsync(() -> {
-            Boolean result = null;
+    public static Optional<TOTPData> getTOTP(UUID uuid) {
+        TOTPData result = null;
 
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis != null) {
-                    String key = "2faplus:login:" + uuid + "|" + ip;
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis != null) {
+                String key = "2faplus:totp:" + uuid;
 
-                    // Grab info
-                    String data = redis.get(key);
-                    if (data != null) {
-                        result = Boolean.valueOf(data);
-                    }
+                // Grab info
+                String data = redis.get(key);
+                if (data != null) {
+                    JSONObject obj = JSONUtil.parseObject(data);
+                    result = new TOTPData(uuid, ((Number) obj.get("length")).longValue(), new SecretKeySpec(decoder.decode((String) obj.get("key")), ServiceKeys.TOTP_ALGORITM));
                 }
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
+        } catch (JedisException | ParseException | ClassCastException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
 
-            return result;
-        });
+        return Optional.ofNullable(result);
     }
 
-    public static CompletableFuture<Long> getAuthy(UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
-            Long result = null;
+    public static Optional<HOTPData> getHOTP(UUID uuid) {
+        HOTPData result = null;
 
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis != null) {
-                    String key = "2faplus:authy:" + uuid;
+        try (Jedis redis = RedisUtil.getRedis()) {
+            if (redis != null) {
+                String key = "2faplus:hotp:" + uuid;
 
-                    // Grab info
-                    String data = redis.get(key);
-                    if (data != null) {
-                        result = Long.valueOf(data);
-                    }
+                // Grab info
+                String data = redis.get(key);
+                if (data != null) {
+                    JSONObject obj = JSONUtil.parseObject(data);
+                    result = new HOTPData(uuid, ((Number) obj.get("length")).longValue(), ((Number) obj.get("counter")).longValue(), new SecretKeySpec(decoder.decode((String) obj.get("key")), ServiceKeys.HOTP_ALGORITM));
                 }
-            } catch (JedisException ex) {
-                logger.error(ex.getMessage(), ex);
             }
+        } catch (JedisException | ParseException | ClassCastException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
 
-            return result;
-        });
-    }
-
-    public static CompletableFuture<TOTPCacheData> getTOTP(UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
-            TOTPCacheData result = null;
-
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis != null) {
-                    String key = "2faplus:totp:" + uuid;
-
-                    // Grab info
-                    String data = redis.get(key);
-                    if (data != null) {
-                        JSONObject obj = JSONUtil.parseObject(data);
-                        result = new TOTPCacheData(((Number) obj.get("length")).longValue(), new SecretKeySpec(decoder.decode((String) obj.get("key")), ServiceKeys.TOTP_ALGORITM));
-                    }
-                }
-            } catch (JedisException | ParseException | ClassCastException ex) {
-                logger.error(ex.getMessage(), ex);
-            }
-
-            return result;
-        });
-    }
-
-    public static CompletableFuture<HOTPCacheData> getHOTP(UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
-            HOTPCacheData result = null;
-
-            try (Jedis redis = RedisUtil.getRedis()) {
-                if (redis != null) {
-                    String key = "2faplus:hotp:" + uuid;
-
-                    // Grab info
-                    String data = redis.get(key);
-                    if (data != null) {
-                        JSONObject obj = JSONUtil.parseObject(data);
-                        result = new HOTPCacheData(((Number) obj.get("length")).longValue(), ((Number) obj.get("counter")).longValue(), new SecretKeySpec(decoder.decode((String) obj.get("key")), ServiceKeys.HOTP_ALGORITM));
-                    }
-                }
-            } catch (JedisException | ParseException | ClassCastException ex) {
-                logger.error(ex.getMessage(), ex);
-            }
-
-            return result;
-        });
+        return Optional.ofNullable(result);
     }
 }

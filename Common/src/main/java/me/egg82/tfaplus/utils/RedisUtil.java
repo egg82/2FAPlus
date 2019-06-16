@@ -1,5 +1,8 @@
 package me.egg82.tfaplus.utils;
 
+import java.util.Optional;
+import me.egg82.tfaplus.extended.CachedConfigValues;
+import ninja.leaping.configurate.ConfigurationNode;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisException;
 
@@ -7,15 +10,21 @@ public class RedisUtil {
     private RedisUtil() {}
 
     public static Jedis getRedis() throws JedisException {
-        if (ConfigUtil.getRedisConfigNode() == null) {
-            throw new IllegalArgumentException("redisConfigNode cannot be null.");
+        ConfigurationNode redisConfigNode = ConfigUtil.getRedisNodeOrNull();
+        if (redisConfigNode == null) {
+            return null;
+        }
+
+        Optional<CachedConfigValues> configValues = ConfigUtil.getCachedConfig();
+        if (!configValues.isPresent()) {
+            return null;
         }
 
         Jedis redis = null;
 
-        if (ConfigUtil.getRedisPool() != null) {
-            redis = ConfigUtil.getRedisPool().getResource();
-            String pass = ConfigUtil.getRedisConfigNode().getNode("password").getString();
+        if (configValues.get().getRedisPool() != null) {
+            redis = configValues.get().getRedisPool().getResource();
+            String pass = redisConfigNode.getNode("password").getString();
             if (pass != null && !pass.isEmpty()) {
                 redis.auth(pass);
             }
