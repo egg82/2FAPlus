@@ -20,11 +20,11 @@ public class InventoryMoveItemFrozenHandler implements Consumer<InventoryMoveIte
             return;
         }
 
-        if (!CollectionProvider.getFrozen().containsKey(((Player) event.getSource().getHolder()).getUniqueId())) {
+        if (!(event.getSource().getHolder() instanceof Player)) {
             return;
         }
 
-        if (!(event.getSource().getHolder() instanceof Player)) {
+        if (!CollectionProvider.getFrozen().containsKey(((Player) event.getSource().getHolder()).getUniqueId())) {
             return;
         }
 
