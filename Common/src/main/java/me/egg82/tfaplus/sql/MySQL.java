@@ -200,7 +200,7 @@ public class MySQL {
         }
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid`, `length`, `key` FROM `" + tablePrefix + "hotp`;");
+            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid`, `length`, `counter`, `key` FROM `" + tablePrefix + "hotp`;");
 
             // Iterate rows
             for (Object[] o : query.getData()) {
