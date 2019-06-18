@@ -45,6 +45,10 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                     command = command.trim() + " ";
 
                     if (split.startsWith(command)) {
+                        if (isRegister(split) || isCheck(message)) {
+                            break; // Skip authentication for 2FA registration/check commands
+                        }
+
                         try {
                             if (!api.isRegistered(event.getPlayer().getUniqueId())) {
                                 event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
@@ -67,6 +71,10 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                     command = command.trim() + " ";
 
                     if (message.startsWith(command)) {
+                        if (isRegister(message) || isCheck(message)) {
+                            break; // Skip authentication for 2FA registration/check commands
+                        }
+
                         try {
                             if (!api.isRegistered(event.getPlayer().getUniqueId())) {
                                 event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
@@ -86,5 +94,44 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
                 }
             }
         }
+    }
+
+    private boolean isRegister(String command) {
+        String[] parts = command.split("\\s+");
+
+        if (
+                (
+                        parts[0].equalsIgnoreCase("2faplus")
+                                || parts[0].equalsIgnoreCase("tfaplus")
+                                || parts[0].equalsIgnoreCase("2fa")
+                                || parts[0].equalsIgnoreCase("tfa")
+                )
+                &&
+                (
+                        parts[1].equalsIgnoreCase("register")
+                                || parts[1].equalsIgnoreCase("create")
+                                || parts[1].equalsIgnoreCase("add")
+                )
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isCheck(String command) {
+        String[] parts = command.split("\\s+");
+
+        if (
+                (
+                        parts[0].equalsIgnoreCase("2faplus")
+                                || parts[0].equalsIgnoreCase("tfaplus")
+                                || parts[0].equalsIgnoreCase("2fa")
+                                || parts[0].equalsIgnoreCase("tfa")
+                )
+                && parts[1].equalsIgnoreCase("check")
+        ) {
+            return true;
+        }
+        return false;
     }
 }
