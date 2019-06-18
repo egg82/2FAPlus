@@ -42,25 +42,25 @@ public class ConfigurationVersionUtil {
 
     private static void to11(ConfigurationNode config) {
         // Add 2FAPlus to commands
-        List<String> sources;
+        List<String> commands;
         try {
-            sources = config.getNode("2fa", "command-list").getList(TypeToken.of(String.class));
+            commands = config.getNode("2fa", "command-list").getList(TypeToken.of(String.class));
         } catch (ObjectMappingException ex) {
-            sources = new ArrayList<>();
+            commands = new ArrayList<>();
         }
-        if (!sources.contains("2faplus")) {
-            sources.add("2faplus");
+        if (!commands.contains("2faplus")) {
+            commands.add("2faplus");
         }
-        if (!sources.contains("tfaplus")) {
-            sources.add("tfaplus");
+        if (!commands.contains("tfaplus")) {
+            commands.add("tfaplus");
         }
-        if (!sources.contains("2fa")) {
-            sources.add("2fa");
+        if (!commands.contains("2fa")) {
+            commands.add("2fa");
         }
-        if (!sources.contains("tfa")) {
-            sources.add("tfa");
+        if (!commands.contains("tfa")) {
+            commands.add("tfa");
         }
-        config.getNode("2fa", "command-list").setValue(sources);
+        config.getNode("2fa", "command-list").setValue(commands);
 
         // Version
         config.getNode("version").setValue(1.1d);
