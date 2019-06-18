@@ -29,6 +29,11 @@ public class CheckCommand implements Runnable {
     }
 
     public void run() {
+        if (!sender.getName().equals(playerName) && !sender.hasPermission("2faplus.admin")) {
+            sender.sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "You need the \"2faplus.admin\" permission node to check other players.");
+            return;
+        }
+
         sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Checking " + ChatColor.WHITE + playerName + ChatColor.YELLOW + ", please wait..");
 
         chain

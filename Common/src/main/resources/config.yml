@@ -124,7 +124,13 @@ otp:
   # 0 or less to disable
   max-attempts: 3
   # The kick message to display to players who have tried (and failed) to authenticate too many times
+  # If left blank, will not kick the player
   too-many-attempts-kick-message: '&cYou have attempted 2FA too many times!'
+  # The command that CONSOLE will run for players who have tried (and failed) to authenticate too many times
+  # Use %player% as a placeholder for the player's (real) name
+  # Use %uuid% as a placeholder for the player's uuid
+  # If left blank, will not run anything
+  too-many-attempts-command: ''
   # How players are frozen while they are waiting for authentication
   freeze:
     # Stop non-authenticated players from running commands
@@ -171,4 +177,4 @@ update:
   notify: true
 
 # Config version, no touchy plz
-version: 1.3
+version: 1.4

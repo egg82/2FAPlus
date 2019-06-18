@@ -136,9 +136,11 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                     event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
                 } else {
                     if (event.isAsynchronous()) {
-                        Bukkit.getScheduler().runTask(plugin, () -> kickPlayer(config.get(), event.getPlayer()));
+                        Bukkit.getScheduler().runTask(plugin, () -> tryRunCommand(config.get(), event.getPlayer()));
+                        Bukkit.getScheduler().runTask(plugin, () -> tryKickPlayer(config.get(), event.getPlayer()));
                     } else {
-                        kickPlayer(config.get(), event.getPlayer());
+                        tryRunCommand(config.get(), event.getPlayer());
+                        tryKickPlayer(config.get(), event.getPlayer());
                     }
                 }
                 return;
@@ -162,7 +164,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your 2FA code was successfully verified!");
     }
 
-    private void kickPlayer(Configuration config, Player player) {
+    private void tryRunCommand(Configuration config, Player player) {
         Optional<PlaceholderAPIHook> placeholderapi;
         try {
             placeholderapi = ServiceLocator.getOptional(PlaceholderAPIHook.class);
@@ -171,10 +173,41 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             placeholderapi = Optional.empty();
         }
 
+        String command = config.getNode("2fa", "too-many-attempts-command").getString("");
+        if (command.isEmpty()) {
+            return;
+        }
+
+        command = command.replace("%player%", player.getName()).replace("%uuid%", player.getUniqueId().toString());
+        if (command.charAt(0) == '/') {
+            command = command.substring(1);
+        }
+
         if (placeholderapi.isPresent()) {
-            player.kickPlayer(placeholderapi.get().withPlaceholders(player, config.getNode("2fa", "too-many-attempts-kick-message").getString("")));
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), placeholderapi.get().withPlaceholders(player, command));
         } else {
-            player.kickPlayer(config.getNode("2fa", "too-many-attempts-kick-message").getString(""));
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+        }
+    }
+
+    private void tryKickPlayer(Configuration config, Player player) {
+        Optional<PlaceholderAPIHook> placeholderapi;
+        try {
+            placeholderapi = ServiceLocator.getOptional(PlaceholderAPIHook.class);
+        } catch (InstantiationException | IllegalAccessException ex) {
+            logger.error(ex.getMessage(), ex);
+            placeholderapi = Optional.empty();
+        }
+
+        String message = config.getNode("2fa", "too-many-attempts-kick-message").getString("");
+        if (message.isEmpty()) {
+            return;
+        }
+
+        if (placeholderapi.isPresent()) {
+            player.kickPlayer(placeholderapi.get().withPlaceholders(player, message));
+        } else {
+            player.kickPlayer(message);
         }
     }
 
