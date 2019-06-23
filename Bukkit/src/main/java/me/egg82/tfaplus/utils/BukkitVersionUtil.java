@@ -7,6 +7,7 @@ import ninja.egg82.reflect.PackageFilter;
 import org.bukkit.Bukkit;
 
 public class BukkitVersionUtil {
+    private static final Object versionLock = new Object();
     private static String gameVersion = null;
 
     private BukkitVersionUtil() {}
@@ -17,7 +18,7 @@ public class BukkitVersionUtil {
         }
 
         int[] v1 = parseVersion(version, '.');
-        int[] v2 = parseVersion(getVersion(), '.');
+        int[] v2 = parseVersion(getGameVersion(), '.');
 
         boolean equalOrGreater = true;
         for (int i = 0; i < v1.length; i++) {
@@ -39,17 +40,22 @@ public class BukkitVersionUtil {
         return equalOrGreater;
     }
 
-    public static String getVersion() {
-        if (gameVersion != null) {
-            return gameVersion;
+    public static String getGameVersion() {
+        String localVersion = gameVersion;
+        if (localVersion == null) {
+            synchronized (versionLock) {
+                localVersion = gameVersion;
+                if (localVersion == null) {
+                    localVersion = Bukkit.getVersion();
+                    localVersion = localVersion.substring(localVersion.indexOf('('));
+                    localVersion = localVersion.substring(localVersion.indexOf(' ') + 1, localVersion.length() - 1);
+                    localVersion = localVersion.trim().replace('_', '.');
+                    gameVersion = localVersion;
+                }
+            }
         }
 
-        String gameVersion = Bukkit.getVersion();
-        gameVersion = gameVersion.substring(gameVersion.indexOf('('));
-        gameVersion = gameVersion.substring(gameVersion.indexOf(' ') + 1, gameVersion.length() - 1);
-        gameVersion = gameVersion.trim().replace('_', '.');
-        BukkitVersionUtil.gameVersion = gameVersion;
-        return gameVersion;
+        return localVersion;
     }
 
     public static <T> Class<T> getBestMatch(Class<T> clazz, String version, String packageName, boolean recursive) {

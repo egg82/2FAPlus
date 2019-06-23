@@ -50,10 +50,10 @@ public class Redis {
 
             for (LoginData result : sqlResult.getLoginData()) {
                 String key = "2faplus:login:" + result.getUUID() + "|" + result.getIP();
-                int offset = (int) Math.floorDiv(result.getCreated() - System.currentTimeMillis(), 1000L);
+                int offset = (int) Math.floorDiv(System.currentTimeMillis() - result.getCreated(), 1000L);
                 int cacheTime = (int) Math.floorDiv(cachedConfig.get().getIPCacheTime(), 1000L);
                 if (offset < cacheTime) {
-                    redis.setex(key, offset - cacheTime, String.valueOf(Boolean.TRUE));
+                    redis.setex(key, cacheTime - offset, String.valueOf(Boolean.TRUE));
                 } else {
                     redis.del(key);
                 }
@@ -138,10 +138,10 @@ public class Redis {
             }
 
             String key = "2faplus:login:" + sqlResult.getUUID() + "|" + sqlResult.getIP();
-            int offset = (int) Math.floorDiv(sqlResult.getCreated() - System.currentTimeMillis(), 1000L);
+            int offset = (int) Math.floorDiv(System.currentTimeMillis() - sqlResult.getCreated(), 1000L);
             int cacheTime = (int) Math.floorDiv(cachedConfig.get().getIPCacheTime(), 1000L);
             if (offset < cacheTime) {
-                redis.setex(key, offset - cacheTime, String.valueOf(Boolean.TRUE));
+                redis.setex(key, cacheTime - offset, String.valueOf(Boolean.TRUE));
             } else {
                 redis.del(key);
             }

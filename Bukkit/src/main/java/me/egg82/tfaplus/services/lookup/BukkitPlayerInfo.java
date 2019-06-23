@@ -1,13 +1,14 @@
 package me.egg82.tfaplus.services.lookup;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import ninja.egg82.json.JSONUtil;
@@ -16,49 +17,56 @@ import org.bukkit.entity.Player;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BukkitPlayerInfo implements PlayerInfo {
-    private static final Logger logger = LoggerFactory.getLogger(BukkitPlayerInfo.class);
-
     private UUID uuid;
     private String name;
 
-    private static LoadingCache<UUID, String> uuidCache = Caffeine.newBuilder().expireAfterWrite(1L, TimeUnit.HOURS).build(k -> getNameExpensive(k));
-    private static LoadingCache<String, UUID> nameCache = Caffeine.newBuilder().expireAfterWrite(1L, TimeUnit.HOURS).build(k -> getUUIDExpensive(k));
+    private static Cache<UUID, String> uuidCache = Caffeine.newBuilder().expireAfterWrite(1L, TimeUnit.HOURS).build();
+    private static Cache<String, UUID> nameCache = Caffeine.newBuilder().expireAfterWrite(1L, TimeUnit.HOURS).build();
+
+    private static final Object uuidCacheLock = new Object();
+    private static final Object nameCacheLock = new Object();
 
     public BukkitPlayerInfo(UUID uuid) throws IOException {
         this.uuid = uuid;
 
-        try {
-            this.name = uuidCache.get(uuid);
-        } catch (RuntimeException ex) {
-            if (ex.getCause() instanceof IOException) {
-                throw (IOException) ex.getCause();
+        Optional<String> name = Optional.ofNullable(uuidCache.getIfPresent(uuid));
+        if (!name.isPresent()) {
+            synchronized (uuidCacheLock) {
+                name = Optional.ofNullable(uuidCache.getIfPresent(uuid));
+                if (!name.isPresent()) {
+                    name = Optional.of(nameExpensive(uuid));
+                    uuidCache.put(uuid, name.get());
+                }
             }
-            throw ex;
         }
+
+        this.name = name.get();
     }
 
     public BukkitPlayerInfo(String name) throws IOException {
         this.name = name;
 
-        try {
-            this.uuid = nameCache.get(name);
-        } catch (RuntimeException ex) {
-            if (ex.getCause() instanceof IOException) {
-                throw (IOException) ex.getCause();
+        Optional<UUID> uuid = Optional.ofNullable(nameCache.getIfPresent(name));
+        if (!uuid.isPresent()) {
+            synchronized (nameCacheLock) {
+                uuid = Optional.ofNullable(nameCache.getIfPresent(name));
+                if (!uuid.isPresent()) {
+                    uuid = Optional.of(uuidExpensive(name));
+                    nameCache.put(name, uuid.get());
+                }
             }
-            throw ex;
         }
+
+        this.uuid = uuid.get();
     }
 
     public UUID getUUID() { return uuid; }
 
     public String getName() { return name; }
 
-    private static String getNameExpensive(UUID uuid) throws IOException {
+    private static String nameExpensive(UUID uuid) throws IOException {
         // Currently-online lookup
         Player player = Bukkit.getPlayer(uuid);
         if (player != null) {
@@ -89,13 +97,13 @@ public class BukkitPlayerInfo implements PlayerInfo {
                 return null;
             }
         } catch (ParseException ex) {
-            logger.error(ex.getMessage(), ex);
+            throw new IOException(ex.getMessage(), ex);
         }
 
-        return null;
+        throw new IOException("Could not load player data from Mojang (rate-limited?)");
     }
 
-    private static UUID getUUIDExpensive(String name) throws IOException {
+    private static UUID uuidExpensive(String name) throws IOException {
         // Currently-online lookup
         Player player = Bukkit.getPlayer(name);
         if (player != null) {
@@ -126,10 +134,10 @@ public class BukkitPlayerInfo implements PlayerInfo {
                 return null;
             }
         } catch (ParseException ex) {
-            logger.error(ex.getMessage(), ex);
+            throw new IOException(ex.getMessage(), ex);
         }
 
-        return null;
+        throw new IOException("Could not load player data from Mojang (rate-limited?)");
     }
 
     private static HttpURLConnection getConnection(String url) throws IOException {
