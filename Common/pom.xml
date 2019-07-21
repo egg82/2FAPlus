@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>2faplus-common</artifactId>
-    <version>2.3.15</version>
+    <version>2.4.15</version>
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>

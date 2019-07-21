@@ -1,0 +1,13 @@
+acf-minecraft:
+  multiple_players_match: "en"
+
+description:
+  reload: "Reloads the plugin."
+  register_authy: "Registers a player in the Authy 2FA system. Valid country codes can be found at https://countrycode.org/"
+  register_totp: "Registers a player in the TOTP 2FA system. For Google, Microsoft, LastPass, etc."
+  register_hotp: "Registers a player in the HOTP 2FA system. For YubiKey, NitroKey, etc."
+  delete: "Removes a player in the 2FA system."
+  check: "Checks the player's registration status in the 2FA system."
+  seek: "Re-synchronizes your HOTP counter using the next few HOTP codes provided by your client."
+
+version: 1.0

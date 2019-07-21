@@ -23,14 +23,14 @@ public class TFAPlusCommand extends BaseCommand {
 
     @Subcommand("reload")
     @CommandPermission("2faplus.admin")
-    @Description("Reloads the plugin.")
+    @Description("{@@description.reload}")
     public void onReload(CommandSender sender) {
         new ReloadCommand(plugin, taskFactory.newChain(), sender).run();
     }
 
     @Subcommand("register|create|add authy")
     @CommandPermission("2faplus.use")
-    @Description("Registers a player in the Authy 2FA system. Valid country codes can be found at https://countrycode.org/")
+    @Description("{@@description.register_authy}")
     @Syntax("<player> <email> [phone-country-code] <phone-number>")
     @CommandCompletion("@player")
     public void onRegisterAuthy(CommandSender sender, String playerName, String email, String countryCode, String phone) {
@@ -39,7 +39,7 @@ public class TFAPlusCommand extends BaseCommand {
 
     @Subcommand("register|create|add totp")
     @CommandPermission("2faplus.use")
-    @Description("Registers a player in the TOTP 2FA system. For Google, Microsoft, LastPass, etc.")
+    @Description("{@@description.register_totp}")
     @Syntax("<player>")
     @CommandCompletion("@player")
     public void onRegisterTOTP(CommandSender sender, String playerName) {
@@ -48,16 +48,16 @@ public class TFAPlusCommand extends BaseCommand {
 
     @Subcommand("register|create|add hotp")
     @CommandPermission("2faplus.use")
-    @Description("Registers a player in the HOTP 2FA system. For YubiKey, NitroKey, etc.")
+    @Description("{@@description.register_hotp}")
     @Syntax("<player>")
     @CommandCompletion("@player")
     public void onRegisterHOTP(CommandSender sender, String playerName) {
         new RegisterHOTPCommand(taskFactory.newChain(), sender, playerName).run();
     }
 
-    @Subcommand("remove|delete")
+    @Subcommand("delete|remove")
     @CommandPermission("2faplus.use")
-    @Description("Removes a player in the 2FA system.")
+    @Description("{@@description.delete}")
     @Syntax("<player>")
     @CommandCompletion("@player")
     public void onDelete(CommandSender sender, String playerName) {
@@ -66,7 +66,7 @@ public class TFAPlusCommand extends BaseCommand {
 
     @Subcommand("check")
     @CommandPermission("2faplus.use")
-    @Description("Checks the player's registration status in the 2FA system.")
+    @Description("{@@description.check}")
     @Syntax("<player>")
     @CommandCompletion("@player")
     public void onCheck(CommandSender sender, String playerName) {

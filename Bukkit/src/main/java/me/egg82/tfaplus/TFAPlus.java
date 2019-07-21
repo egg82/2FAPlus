@@ -1,5 +1,6 @@
 package me.egg82.tfaplus;
 
+import co.aikar.commands.BukkitLocales;
 import co.aikar.commands.PaperCommandManager;
 import co.aikar.commands.RegisteredCommand;
 import co.aikar.taskchain.BukkitTaskChainFactory;
@@ -8,6 +9,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +33,7 @@ import ninja.egg82.updater.SpigotUpdater;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -89,6 +92,7 @@ public class TFAPlus {
         commandManager = new PaperCommandManager(plugin);
         commandManager.enableUnstableAPI("help");
 
+        loadLanguages();
         loadServices();
         loadCommands();
         loadEvents();
@@ -121,6 +125,25 @@ public class TFAPlus {
         plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Disabled");
 
         GameAnalyticsErrorHandler.close();
+    }
+
+    private void loadLanguages() {
+        BukkitLocales locales = commandManager.getLocales();
+
+        try {
+            for (Locale locale : Locale.getAvailableLocales()) {
+                Optional<File> localeFile = LanguageFileUtil.getLanguage(plugin, locale);
+                if (localeFile.isPresent()) {
+                    commandManager.addSupportedLanguage(locale);
+                    locales.loadYamlLanguageFile(localeFile.get(), locale);
+                }
+            }
+        } catch (IOException | InvalidConfigurationException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+
+        locales.loadLanguages();
+        commandManager.usePerIssuerLocale(true, true);
     }
 
     private void loadServices() {

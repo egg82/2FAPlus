@@ -32,7 +32,7 @@ public class HOTPCommand extends BaseCommand {
     }
 
     @Subcommand("seek|reset|resync|resynchronize|sync|synchronize")
-    @Description("Re-synchronizes your HOTP counter using the next few HOTP codes provided by your client.")
+    @Description("{@@description.seek}")
     public void onSeek(Player sender) {
         taskFactory.newChain()
                 .<Boolean>asyncCallback((v, f) -> {
