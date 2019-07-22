@@ -1,8 +1,6 @@
 package me.egg82.tfaplus;
 
-import co.aikar.commands.BukkitLocales;
-import co.aikar.commands.PaperCommandManager;
-import co.aikar.commands.RegisteredCommand;
+import co.aikar.commands.*;
 import co.aikar.taskchain.BukkitTaskChainFactory;
 import co.aikar.taskchain.TaskChainFactory;
 import com.google.common.collect.ImmutableList;
@@ -11,6 +9,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,12 +17,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import me.egg82.tfaplus.commands.HOTPCommand;
 import me.egg82.tfaplus.commands.TFAPlusCommand;
+import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.events.*;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
 import me.egg82.tfaplus.hooks.PlayerAnalyticsHook;
 import me.egg82.tfaplus.hooks.PluginHook;
 import me.egg82.tfaplus.services.GameAnalyticsErrorHandler;
+import me.egg82.tfaplus.services.PluginMessageFormatter;
 import me.egg82.tfaplus.utils.*;
 import ninja.egg82.events.BukkitEventSubscriber;
 import ninja.egg82.events.BukkitEvents;
@@ -144,6 +145,11 @@ public class TFAPlus {
 
         locales.loadLanguages();
         commandManager.usePerIssuerLocale(true, true);
+
+        commandManager.setFormat(MessageType.ERROR, new PluginMessageFormatter(commandManager, Message.GENERAL__HEADER));
+        commandManager.setFormat(MessageType.INFO, new PluginMessageFormatter(commandManager, Message.GENERAL__HEADER));
+        commandManager.setFormat(MessageType.ERROR, ChatColor.DARK_RED, ChatColor.YELLOW, ChatColor.AQUA);
+        commandManager.setFormat(MessageType.INFO, ChatColor.WHITE, ChatColor.YELLOW, ChatColor.AQUA, ChatColor.GREEN, ChatColor.RED);
     }
 
     private void loadServices() {

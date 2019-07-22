@@ -10,4 +10,15 @@ description:
   check: "Checks the player's registration status in the 2FA system."
   seek: "Re-synchronizes your HOTP counter using the next few HOTP codes provided by your client."
 
+general:
+  header: "<c2>[</c2><c3>2FA+</c3><c2>]</c2> "
+
+error:
+  internal: "Internal error"
+  player_only: "Only players can perform this action."
+
+seek:
+  2fa_not_enabled: "You must have 2FA enabled for this command to have any affect."
+  next_codes: "<c2>Please provide the next</c2> {codes} <c2>codes from your client.</c2>"
+
 version: 1.0

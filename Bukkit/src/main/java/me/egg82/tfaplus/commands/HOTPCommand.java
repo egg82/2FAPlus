@@ -2,6 +2,7 @@ package me.egg82.tfaplus.commands;
 
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.CommandHelp;
+import co.aikar.commands.CommandIssuer;
 import co.aikar.commands.annotation.*;
 import co.aikar.taskchain.TaskChain;
 import co.aikar.taskchain.TaskChainAbortAction;
@@ -9,13 +10,11 @@ import co.aikar.taskchain.TaskChainFactory;
 import java.util.ArrayList;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
+import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.services.CollectionProvider;
-import me.egg82.tfaplus.utils.LogUtil;
 import ninja.egg82.tuples.longs.LongObjectPair;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,11 +32,16 @@ public class HOTPCommand extends BaseCommand {
 
     @Subcommand("seek|reset|resync|resynchronize|sync|synchronize")
     @Description("{@@description.seek}")
-    public void onSeek(Player sender) {
+    public void onSeek(CommandIssuer issuer) {
+        if (!issuer.isPlayer()) {
+            issuer.sendError(Message.ERROR__PLAYER_ONLY);
+            return;
+        }
+
         taskFactory.newChain()
                 .<Boolean>asyncCallback((v, f) -> {
                     try {
-                        f.accept(api.isRegistered(sender.getUniqueId()));
+                        f.accept(api.isRegistered(issuer.getUniqueId()));
                     } catch (APIException ex) {
                         logger.error(ex.getMessage(), ex);
                     }
@@ -45,19 +49,19 @@ public class HOTPCommand extends BaseCommand {
                 .abortIfNull(new TaskChainAbortAction<Object, Object, Object>() {
                     @Override
                     public void onAbort(TaskChain<?> chain, Object arg1) {
-                        sender.sendMessage(LogUtil.getHeading() + LogUtil.getHeading() + ChatColor.YELLOW + "Internal error");
+                        issuer.sendError(Message.ERROR__INTERNAL);
                     }
                 })
                 .syncLast(v -> {
                     if (!v) {
-                        sender.sendMessage(LogUtil.getHeading() + LogUtil.getHeading() + ChatColor.YELLOW + "You must have 2FA enabled for this command to have any affect.");
+                        issuer.sendError(Message.SEEK__2FA_NOT_ENABLED);
                         return;
                     }
 
                     long numCodes = getRandom(3L, 4L);
 
-                    sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please provide the next " + ChatColor.WHITE + numCodes + ChatColor.YELLOW + " codes from your client.");
-                    CollectionProvider.getHOTPFrozen().put(sender.getUniqueId(), new LongObjectPair<>(numCodes, new ArrayList<>()));
+                    issuer.sendInfo(Message.SEEK__NEXT_CODES, "{codes}", String.valueOf(numCodes));
+                    CollectionProvider.getHOTPFrozen().put(issuer.getUniqueId(), new LongObjectPair<>(numCodes, new ArrayList<>()));
                 })
                 .execute();
     }
