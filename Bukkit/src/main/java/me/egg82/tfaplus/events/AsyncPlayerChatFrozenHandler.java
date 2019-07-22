@@ -50,7 +50,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
                 if (pair.getSecond().size() >= pair.getFirst()) {
                     CollectionProvider.getHOTPFrozen().remove(event.getPlayer().getUniqueId());
-                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Attempting to re-synchronize your counter, please wait..");
+                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__BEGIN);
 
                     try {
                         api.seekHOTPCounter(event.getPlayer().getUniqueId(), pair.getSecond());
@@ -59,14 +59,14 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                             logger.error(ex.getMessage(), ex);
                             CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
                         } else {
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your counter could not be re-synchronized using the codes provided. Please try again.");
+                            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.RESYNC__FAILURE);
                         }
                         return;
                     }
 
-                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Successfully re-synchronized your counter.");
+                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__SUCCESS);
                 } else {
-                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.WHITE + (pair.getFirst() - pair.getSecond().size()) + ChatColor.YELLOW + " more code" + (pair.getFirst() - pair.getSecond().size() > 1 ? "s" : "") + " to go!");
+                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__MORE, "{codes}", String.valueOf(pair.getFirst() - pair.getSecond().size()));
                 }
             }
 
@@ -78,10 +78,10 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             if (message.matches("\\d+")) {
                 event.setCancelled(true);
 
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
+                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__BEGIN);
                 try {
                     if (!api.verify(event.getPlayer().getUniqueId(), message)) {
-                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
+                        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_INVALID);
                         return;
                     }
                 } catch (APIException ex) {
@@ -89,13 +89,14 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                         logger.error(ex.getMessage(), ex);
                         CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
                     } else {
-                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
+                        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_ERROR, "{error}", ex.getMessage());
                     }
                     return;
                 }
 
                 String command = CollectionProvider.getCommandFrozen().remove(event.getPlayer().getUniqueId());
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your 2FA code was successfully verified! Running the command..");
+                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__SUCCESS);
+                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__RUNNING_COMMAND);
                 if (event.isAsynchronous()) {
                     Bukkit.getScheduler().runTask(plugin, () -> Bukkit.getServer().dispatchCommand(event.getPlayer(), command));
                 } else {
@@ -128,7 +129,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
         event.setCancelled(true);
 
-        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Verifying your 2FA code, please wait..");
+        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__BEGIN);
         try {
             if (!api.verify(event.getPlayer().getUniqueId(), message)) {
                 long attempts = CollectionProvider.getFrozen().compute(event.getPlayer().getUniqueId(), (k, v) -> {
@@ -139,7 +140,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                 });
 
                 if (cachedConfig.get().getMaxAttempts() <= 0L || attempts < cachedConfig.get().getMaxAttempts()) {
-                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your 2FA code was invalid! Please try again.");
+                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_INVALID);
                 } else {
                     if (event.isAsynchronous()) {
                         Bukkit.getScheduler().runTask(plugin, () -> tryRunCommand(config.get(), event.getPlayer()));
@@ -156,7 +157,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                 logger.error(ex.getMessage(), ex);
                 CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
             } else {
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
+                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_ERROR, "{error}", ex.getMessage());
             }
             return;
         }
@@ -169,7 +170,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         }
 
         CollectionProvider.getFrozen().remove(event.getPlayer().getUniqueId());
-        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Your 2FA code was successfully verified!");
+        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__SUCCESS);
     }
 
     private void tryRunCommand(Configuration config, Player player) {

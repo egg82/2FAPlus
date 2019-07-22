@@ -32,6 +32,19 @@ player:
   enter_code: "<c2>Please enter your 2FA code into the chat.</c2>"
   error_protected: "2FA registration is required to use protected commands!"
   warning_protected: "<c2>You are attempting to run a protected command:</c2> /{command}"
+  running_command: "<c2>Running the command..</c2>"
+
+resync:
+  begin: "<c2>Attempting to re-synchronize your counter, please wait..</c2>"
+  success: "<c4>Successfully re-synchronized your counter!</c4>"
+  failure: "Your counter could not be re-synchronized using the codes provided. Please try again."
+  more: "{codes} <c2>more code(s) to go!</c2>"
+
+verify:
+  begin: "<c2>Verifying your 2FA code, please wait..</c2>"
+  success: "<c4>Your 2FA code was successfully verified!</c4>"
+  failure_invalid: "Your 2FA code was invalid! Please try again."
+  failure_error: "Something went wrong while validating your 2FA code: <c4>{error}</c4>"
 
 reload:
   begin: "<c2>Reloading, please wait..</c2>"
