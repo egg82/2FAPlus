@@ -2,12 +2,12 @@ package me.egg82.tfaplus.commands;
 
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.CommandHelp;
+import co.aikar.commands.CommandIssuer;
 import co.aikar.commands.annotation.*;
 import co.aikar.taskchain.TaskChainFactory;
 import me.egg82.tfaplus.commands.internal.*;
-import me.egg82.tfaplus.utils.LogUtil;
+import me.egg82.tfaplus.enums.Message;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
 
@@ -24,8 +24,8 @@ public class TFAPlusCommand extends BaseCommand {
     @Subcommand("reload")
     @CommandPermission("2faplus.admin")
     @Description("{@@description.reload}")
-    public void onReload(CommandSender sender) {
-        new ReloadCommand(plugin, taskFactory.newChain(), sender).run();
+    public void onReload(CommandIssuer issuer) {
+        new ReloadCommand(plugin, taskFactory.newChain(), issuer).run();
     }
 
     @Subcommand("register|create|add authy")
@@ -33,8 +33,8 @@ public class TFAPlusCommand extends BaseCommand {
     @Description("{@@description.register_authy}")
     @Syntax("<player> <email> [phone-country-code] <phone-number>")
     @CommandCompletion("@player")
-    public void onRegisterAuthy(CommandSender sender, String playerName, String email, String countryCode, String phone) {
-        new RegisterAuthyCommand(taskFactory.newChain(), sender, playerName, email, countryCode, phone).run();
+    public void onRegisterAuthy(CommandIssuer issuer, String playerName, String email, String countryCode, String phone) {
+        new RegisterAuthyCommand(taskFactory.newChain(), issuer, playerName, email, countryCode, phone).run();
     }
 
     @Subcommand("register|create|add totp")
@@ -81,8 +81,8 @@ public class TFAPlusCommand extends BaseCommand {
 
     @HelpCommand
     @Syntax("[command]")
-    public void onHelp(CommandSender sender, CommandHelp help) {
+    public void onHelp(CommandIssuer issuer, CommandHelp help) {
         help.showHelp();
-        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Additional commands: " + ChatColor.WHITE + "/hotp");
+        issuer.sendInfo(Message.DESCRIPTION__MAIN_HELP);
     }
 }

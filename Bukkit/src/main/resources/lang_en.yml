@@ -9,13 +9,25 @@ description:
   delete: "Removes a player in the 2FA system."
   check: "Checks the player's registration status in the 2FA system."
   seek: "Re-synchronizes your HOTP counter using the next few HOTP codes provided by your client."
+  main_help: "<c2>Additional commands:</c2> /hotp"
 
 general:
   header: "<c2>[</c2><c3>2FA+</c3><c2>]</c2> "
 
 error:
   internal: "Internal error"
+  no_uuid: "Could not get UUID for <c4>{player}</c4> (rate-limited?)"
   player_only: "Only players can perform this action."
+  need_admin_other: "You need the <c4>2faplus.admin</c4> permission node to perform this action on other players."
+
+reload:
+  begin: "<c2>Reloading, please wait..</c2>"
+  end: "<c4>Configuration reloaded!</c4>"
+
+register:
+  begin: "<c2>Registering</c2> {player}<c2>, please wait..</c2>"
+  success: "{player} <c4>has been successfully registered.</c4>"
+  failure: "Could not register <c4>{player}</c4>"
 
 seek:
   2fa_not_enabled: "You must have 2FA enabled for this command to have any affect."
