@@ -65,6 +65,8 @@ public class TFAPlus {
     private final Plugin plugin;
     private final boolean isBukkit;
 
+    private CommandIssuer consoleCommandIssuer = null;
+
     public TFAPlus(Plugin plugin) {
         isBukkit = BukkitEnvironmentUtil.getEnvironment() == BukkitEnvironmentUtil.Environment.BUKKIT;
         this.plugin = plugin;
@@ -93,6 +95,8 @@ public class TFAPlus {
         commandManager = new PaperCommandManager(plugin);
         commandManager.enableUnstableAPI("help");
 
+        consoleCommandIssuer = commandManager.getCommandIssuer(plugin.getServer().getConsoleSender());
+
         loadLanguages();
         loadServices();
         loadCommands();
@@ -100,12 +104,11 @@ public class TFAPlus {
         loadHooks();
         loadMetrics();
 
-        plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Enabled");
-
-        plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading()
-                + ChatColor.YELLOW + "[" + ChatColor.AQUA + "Version " + ChatColor.WHITE + plugin.getDescription().getVersion() + ChatColor.YELLOW +  "] "
-                + ChatColor.YELLOW + "[" + ChatColor.WHITE + commandManager.getRegisteredRootCommands().size() + ChatColor.GOLD + " Commands" + ChatColor.YELLOW +  "] "
-                + ChatColor.YELLOW + "[" + ChatColor.WHITE + events.size() + ChatColor.BLUE + " Events" + ChatColor.YELLOW +  "]"
+        consoleCommandIssuer.sendInfo(Message.GENERAL__ENABLED);
+        consoleCommandIssuer.sendInfo(Message.GENERAL__LOAD,
+                "{version}", plugin.getDescription().getVersion(),
+                "{commands}", String.valueOf(commandManager.getRegisteredRootCommands().size()),
+                "{events}", String.valueOf(events.size())
         );
 
         workPool.submit(this::checkUpdate);
@@ -123,7 +126,7 @@ public class TFAPlus {
         unloadHooks();
         unloadServices();
 
-        plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Disabled");
+        consoleCommandIssuer.sendInfo(Message.GENERAL__DISABLED);
 
         GameAnalyticsErrorHandler.close();
     }
@@ -149,7 +152,7 @@ public class TFAPlus {
         commandManager.setFormat(MessageType.ERROR, new PluginMessageFormatter(commandManager, Message.GENERAL__HEADER));
         commandManager.setFormat(MessageType.INFO, new PluginMessageFormatter(commandManager, Message.GENERAL__HEADER));
         commandManager.setFormat(MessageType.ERROR, ChatColor.DARK_RED, ChatColor.YELLOW, ChatColor.AQUA, ChatColor.WHITE);
-        commandManager.setFormat(MessageType.INFO, ChatColor.WHITE, ChatColor.YELLOW, ChatColor.AQUA, ChatColor.GREEN, ChatColor.RED);
+        commandManager.setFormat(MessageType.INFO, ChatColor.WHITE, ChatColor.YELLOW, ChatColor.AQUA, ChatColor.GREEN, ChatColor.RED, ChatColor.GOLD, ChatColor.BLUE, ChatColor.GRAY);
     }
 
     private void loadServices() {
@@ -235,17 +238,17 @@ public class TFAPlus {
         PluginManager manager = plugin.getServer().getPluginManager();
 
         if (manager.getPlugin("Plan") != null) {
-            plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Enabling support for Plan.");
+            consoleCommandIssuer.sendInfo(Message.GENERAL__HOOK_ENABLE, "{plugin}", "Plan");
             ServiceLocator.register(new PlayerAnalyticsHook());
         } else {
-            plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Plan was not found. Personal analytics support has been disabled.");
+            consoleCommandIssuer.sendInfo(Message.GENERAL__HOOK_DISABLE, "{plugin}", "Plan");
         }
 
         if (manager.getPlugin("PlaceholderAPI") != null) {
-            plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Enabling support for PlaceholderAPI.");
+            consoleCommandIssuer.sendInfo(Message.GENERAL__HOOK_ENABLE, "{plugin}", "PlaceholderAPI");
             ServiceLocator.register(new PlaceholderAPIHook());
         } else {
-            plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "PlaceholderAPI was not found. Skipping support for placeholders.");
+            consoleCommandIssuer.sendInfo(Message.GENERAL__HOOK_DISABLE, "{plugin}", "PlaceholderAPI");
         }
     }
 
@@ -313,7 +316,7 @@ public class TFAPlus {
             }
 
             try {
-                plugin.getServer().getConsoleSender().sendMessage(LogUtil.getHeading() + ChatColor.AQUA + " has an " + ChatColor.GREEN + "update" + ChatColor.AQUA + " available! New version: " + ChatColor.YELLOW + updater.getLatestVersion().get());
+                consoleCommandIssuer.sendInfo(Message.GENERAL__UPDATE, "{version}", updater.getLatestVersion().get());
             } catch (ExecutionException ex) {
                 logger.error(ex.getMessage(), ex);
             } catch (InterruptedException ex) {

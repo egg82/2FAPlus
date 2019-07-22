@@ -7,6 +7,12 @@ public enum Message implements MessageKeyProvider {
     DESCRIPTION__MAIN_HELP,
 
     GENERAL__HEADER,
+    GENERAL__ENABLED,
+    GENERAL__DISABLED,
+    GENERAL__LOAD,
+    GENERAL__HOOK_ENABLE,
+    GENERAL__HOOK_DISABLE,
+    GENERAL__UPDATE,
 
     ERROR__INTERNAL,
     ERROR__NO_UUID,
