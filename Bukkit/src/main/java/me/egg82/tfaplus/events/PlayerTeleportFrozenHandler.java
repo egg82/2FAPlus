@@ -21,6 +21,10 @@ public class PlayerTeleportFrozenHandler implements Consumer<PlayerTeleportEvent
 
     private final LoadingCache<UUID, Boolean> recentlyTeleported = Caffeine.newBuilder().expireAfterWrite(10L, TimeUnit.SECONDS).build(k -> Boolean.FALSE);
 
+    private final CommandManager commandManager;
+
+    public PlayerTeleportFrozenHandler(CommandManager commandManager) { this.commandManager = commandManager; }
+
     public void accept(PlayerTeleportEvent event) {
         if (event.isCancelled()) {
             return;
@@ -43,7 +47,7 @@ public class PlayerTeleportFrozenHandler implements Consumer<PlayerTeleportEvent
         if (cachedConfig.get().getFreeze().getMove()) {
             if (!recentlyTeleported.get(event.getPlayer().getUniqueId())) {
                 recentlyTeleported.put(event.getPlayer().getUniqueId(), Boolean.TRUE);
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_MOVE);
+                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_MOVE);
             }
             event.setCancelled(true);
         }

@@ -24,13 +24,15 @@ public class RegisterTOTPCommand implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final TaskChain<?> chain;
+    private final CommandManager commandManager;
     private final CommandIssuer issuer;
     private final String playerName;
 
     private final TFAAPI api = TFAAPI.getInstance();
 
-    public RegisterTOTPCommand(TaskChain<?> chain, CommandIssuer issuer, String playerName) {
+    public RegisterTOTPCommand(TaskChain<?> chain, CommandManager commandManager, CommandIssuer issuer, String playerName) {
         this.chain = chain;
+        this.commandManager = commandManager;
         this.issuer = issuer;
         this.playerName = playerName;
     }
@@ -114,6 +116,6 @@ public class RegisterTOTPCommand implements Runnable {
 
     private Optional<CommandIssuer> getIssuer(UUID uuid) {
         Player player = Bukkit.getPlayer(uuid);
-        return player != null ? Optional.of(CommandManager.getCurrentCommandManager().getCommandIssuer(player)) : Optional.empty();
+        return player != null ? Optional.of(commandManager.getCommandIssuer(player)) : Optional.empty();
     }
 }

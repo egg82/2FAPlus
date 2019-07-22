@@ -18,6 +18,10 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
     private final TFAAPI api = TFAAPI.getInstance();
 
+    private final CommandManager commandManager;
+
+    public PlayerCommandPreprocessFrozenHandler(CommandManager commandManager) { this.commandManager = commandManager; }
+
     public void accept(PlayerCommandPreprocessEvent event) {
         if (event.isCancelled()) {
             return;
@@ -31,7 +35,7 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
         if (CollectionProvider.getFrozen().containsKey(event.getPlayer().getUniqueId())) {
             if (cachedConfig.get().getFreeze().getCommand()) {
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
+                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
                 event.setCancelled(true);
             }
         } else {
@@ -51,12 +55,12 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
                         try {
                             if (!api.isRegistered(event.getPlayer().getUniqueId())) {
-                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.PLAYER__ERROR_PROTECTED);
+                                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.PLAYER__ERROR_PROTECTED);
                                 event.setCancelled(true);
                             } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                                 CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
-                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__WARNING_PROTECTED, "{command}", event.getMessage());
-                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE);
+                                commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__WARNING_PROTECTED, "{command}", event.getMessage());
+                                commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE);
                                 event.setCancelled(true);
                             }
                         } catch (APIException ex) {
@@ -77,12 +81,12 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
                         try {
                             if (!api.isRegistered(event.getPlayer().getUniqueId())) {
-                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.PLAYER__ERROR_PROTECTED);
+                                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.PLAYER__ERROR_PROTECTED);
                                 event.setCancelled(true);
                             } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                                 CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
-                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__WARNING_PROTECTED, "{command}", event.getMessage());
-                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE);
+                                commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__WARNING_PROTECTED, "{command}", event.getMessage());
+                                commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE);
                                 event.setCancelled(true);
                             }
                         } catch (APIException ex) {

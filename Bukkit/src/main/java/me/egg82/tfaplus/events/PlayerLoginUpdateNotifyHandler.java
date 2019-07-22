@@ -20,8 +20,12 @@ public class PlayerLoginUpdateNotifyHandler implements Consumer<PlayerLoginEvent
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Plugin plugin;
+    private final CommandManager commandManager;
 
-    public PlayerLoginUpdateNotifyHandler(Plugin plugin) { this.plugin = plugin; }
+    public PlayerLoginUpdateNotifyHandler(Plugin plugin, CommandManager commandManager) {
+        this.plugin = plugin;
+        this.commandManager = commandManager;
+    }
 
     public void accept(PlayerLoginEvent event) {
         if (!event.getPlayer().hasPermission("2faplus.admin")) {
@@ -54,7 +58,7 @@ public class PlayerLoginUpdateNotifyHandler implements Consumer<PlayerLoginEvent
             if (config.get().getNode("update", "notify").getBoolean(true)) {
                 try {
                     String version = updater.getLatestVersion().get();
-                    Bukkit.getScheduler().runTask(plugin, () -> CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.GENERAL__UPDATE, "{version}", version));
+                    Bukkit.getScheduler().runTask(plugin, () -> commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.GENERAL__UPDATE, "{version}", version));
                 } catch (ExecutionException ex) {
                     logger.error(ex.getMessage(), ex);
                 } catch (InterruptedException ex) {

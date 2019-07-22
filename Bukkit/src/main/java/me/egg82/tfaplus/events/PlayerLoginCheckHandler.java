@@ -28,8 +28,12 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
     private final TFAAPI api = TFAAPI.getInstance();
 
     private final Plugin plugin;
+    private final CommandManager commandManager;
 
-    public PlayerLoginCheckHandler(Plugin plugin) { this.plugin = plugin; }
+    public PlayerLoginCheckHandler(Plugin plugin, CommandManager commandManager) {
+        this.plugin = plugin;
+        this.commandManager = commandManager;
+    }
 
     public void accept(PlayerLoginEvent event) {
         String ip = getIp(event.getAddress());
@@ -95,7 +99,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
         }
 
         CollectionProvider.getFrozen().put(event.getPlayer().getUniqueId(), 0L);
-        Bukkit.getScheduler().runTask(plugin, () -> CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE));
+        Bukkit.getScheduler().runTask(plugin, () -> commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE));
         if (ConfigUtil.getDebugOrFalse()) {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has been sent a verification request.");
         }

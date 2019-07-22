@@ -14,6 +14,10 @@ import org.slf4j.LoggerFactory;
 public class InventoryDragFrozenHandler implements Consumer<InventoryDragEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    private final CommandManager commandManager;
+
+    public InventoryDragFrozenHandler(CommandManager commandManager) { this.commandManager = commandManager; }
+
     public void accept(InventoryDragEvent event) {
         if (event.isCancelled()) {
             return;
@@ -30,7 +34,7 @@ public class InventoryDragFrozenHandler implements Consumer<InventoryDragEvent> 
         }
 
         if (cachedConfig.get().getFreeze().getInventory()) {
-            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getWhoClicked()).sendError(Message.ERROR__NEED_AUTH_ACTION);
+            commandManager.getCommandIssuer(event.getWhoClicked()).sendError(Message.ERROR__NEED_AUTH_ACTION);
             event.setCancelled(true);
         }
     }

@@ -14,6 +14,10 @@ import org.slf4j.LoggerFactory;
 public class PlayerDropItemFrozenHandler implements Consumer<PlayerDropItemEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    private final CommandManager commandManager;
+
+    public PlayerDropItemFrozenHandler(CommandManager commandManager) { this.commandManager = commandManager; }
+
     public void accept(PlayerDropItemEvent event) {
         if (event.isCancelled()) {
             return;
@@ -30,7 +34,7 @@ public class PlayerDropItemFrozenHandler implements Consumer<PlayerDropItemEvent
         }
 
         if (cachedConfig.get().getFreeze().getDrops()) {
-            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
+            commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
             event.setCancelled(true);
         }
     }

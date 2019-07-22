@@ -3,6 +3,7 @@ package me.egg82.tfaplus.commands;
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.CommandHelp;
 import co.aikar.commands.CommandIssuer;
+import co.aikar.commands.CommandManager;
 import co.aikar.commands.annotation.*;
 import co.aikar.taskchain.TaskChainFactory;
 import me.egg82.tfaplus.commands.internal.*;
@@ -15,10 +16,12 @@ import org.bukkit.plugin.Plugin;
 public class TFAPlusCommand extends BaseCommand {
     private final Plugin plugin;
     private final TaskChainFactory taskFactory;
+    private final CommandManager commandManager;
 
-    public TFAPlusCommand(Plugin plugin, TaskChainFactory taskFactory) {
+    public TFAPlusCommand(Plugin plugin, TaskChainFactory taskFactory, CommandManager commandManager) {
         this.plugin = plugin;
         this.taskFactory = taskFactory;
+        this.commandManager = commandManager;
     }
 
     @Subcommand("reload")
@@ -43,7 +46,7 @@ public class TFAPlusCommand extends BaseCommand {
     @Syntax("<player>")
     @CommandCompletion("@player")
     public void onRegisterTOTP(CommandIssuer issuer, String playerName) {
-        new RegisterTOTPCommand(taskFactory.newChain(), issuer, playerName).run();
+        new RegisterTOTPCommand(taskFactory.newChain(), commandManager, issuer, playerName).run();
     }
 
     @Subcommand("register|create|add hotp")
@@ -52,7 +55,7 @@ public class TFAPlusCommand extends BaseCommand {
     @Syntax("<player>")
     @CommandCompletion("@player")
     public void onRegisterHOTP(CommandIssuer issuer, String playerName) {
-        new RegisterHOTPCommand(taskFactory.newChain(), issuer, playerName).run();
+        new RegisterHOTPCommand(taskFactory.newChain(), commandManager, issuer, playerName).run();
     }
 
     @Subcommand("delete|remove")

@@ -31,7 +31,7 @@ error:
 player:
   enter_code: "<c2>Please enter your 2FA code into the chat.</c2>"
   error_protected: "2FA registration is required to use protected commands!"
-  warning_protected: "<c2>You are attempting to run a protected command:</c2> /{command}"
+  warning_protected: "<c2>You are attempting to run a protected command:</c2> {command}"
   running_command: "<c2>Running the command..</c2>"
 
 resync:

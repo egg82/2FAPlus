@@ -14,6 +14,10 @@ import org.slf4j.LoggerFactory;
 public class BlockBreakFrozenHandler implements Consumer<BlockBreakEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    private final CommandManager commandManager;
+
+    public BlockBreakFrozenHandler(CommandManager commandManager) { this.commandManager = commandManager; }
+
     public void accept(BlockBreakEvent event) {
         if (event.isCancelled()) {
             return;
@@ -30,7 +34,7 @@ public class BlockBreakFrozenHandler implements Consumer<BlockBreakEvent> {
         }
 
         if (cachedConfig.get().getFreeze().getBlocks()) {
-            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
+            commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
             event.setCancelled(true);
         }
     }

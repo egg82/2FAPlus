@@ -15,6 +15,10 @@ import org.slf4j.LoggerFactory;
 public class EntityDamageByEntityFrozenHandler implements Consumer<EntityDamageByEntityEvent> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    private final CommandManager commandManager;
+
+    public EntityDamageByEntityFrozenHandler(CommandManager commandManager) { this.commandManager = commandManager; }
+
     public void accept(EntityDamageByEntityEvent event) {
         if (event.isCancelled()) {
             return;
@@ -35,7 +39,7 @@ public class EntityDamageByEntityFrozenHandler implements Consumer<EntityDamageB
         }
 
         if (cachedConfig.get().getFreeze().getAttack()) {
-            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getDamager()).sendError(Message.ERROR__NEED_AUTH_ACTION);
+            commandManager.getCommandIssuer(event.getDamager()).sendError(Message.ERROR__NEED_AUTH_ACTION);
             event.setCancelled(true);
         }
     }

@@ -15,11 +15,9 @@ import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.services.InternalAPI;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import me.egg82.tfaplus.utils.LogUtil;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.tuples.longs.LongObjectPair;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.Plugin;
@@ -32,8 +30,12 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
     private final TFAAPI api = TFAAPI.getInstance();
 
     private final Plugin plugin;
+    private final CommandManager commandManager;
 
-    public AsyncPlayerChatFrozenHandler(Plugin plugin) { this.plugin = plugin; }
+    public AsyncPlayerChatFrozenHandler(Plugin plugin, CommandManager commandManager) {
+        this.plugin = plugin;
+        this.commandManager = commandManager;
+    }
 
     public void accept(AsyncPlayerChatEvent event) {
         if (CollectionProvider.getHOTPFrozen().containsKey(event.getPlayer().getUniqueId())) {
@@ -50,23 +52,23 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
                 if (pair.getSecond().size() >= pair.getFirst()) {
                     CollectionProvider.getHOTPFrozen().remove(event.getPlayer().getUniqueId());
-                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__BEGIN);
+                    commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__BEGIN);
 
                     try {
                         api.seekHOTPCounter(event.getPlayer().getUniqueId(), pair.getSecond());
                     } catch (APIException ex) {
                         if (ex.isHard()) {
                             logger.error(ex.getMessage(), ex);
-                            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
+                            commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
                         } else {
-                            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.RESYNC__FAILURE);
+                            commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.RESYNC__FAILURE);
                         }
                         return;
                     }
 
-                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__SUCCESS);
+                    commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__SUCCESS);
                 } else {
-                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__MORE, "{codes}", String.valueOf(pair.getFirst() - pair.getSecond().size()));
+                    commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.RESYNC__MORE, "{codes}", String.valueOf(pair.getFirst() - pair.getSecond().size()));
                 }
             }
 
@@ -78,25 +80,25 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             if (message.matches("\\d+")) {
                 event.setCancelled(true);
 
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__BEGIN);
+                commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__BEGIN);
                 try {
                     if (!api.verify(event.getPlayer().getUniqueId(), message)) {
-                        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_INVALID);
+                        commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_INVALID);
                         return;
                     }
                 } catch (APIException ex) {
                     if (ex.isHard()) {
                         logger.error(ex.getMessage(), ex);
-                        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
+                        commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
                     } else {
-                        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_ERROR, "{error}", ex.getMessage());
+                        commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_ERROR, "{error}", ex.getMessage());
                     }
                     return;
                 }
 
                 String command = CollectionProvider.getCommandFrozen().remove(event.getPlayer().getUniqueId());
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__SUCCESS);
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__RUNNING_COMMAND);
+                commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__SUCCESS);
+                commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__RUNNING_COMMAND);
                 if (event.isAsynchronous()) {
                     Bukkit.getScheduler().runTask(plugin, () -> Bukkit.getServer().dispatchCommand(event.getPlayer(), command));
                 } else {
@@ -121,7 +123,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         String message = event.getMessage().replaceAll("\\s+", "").trim();
         if (!message.matches("\\d+")) {
             if (cachedConfig.get().getFreeze().getChat()) {
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
+                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
                 event.setCancelled(true);
             }
             return;
@@ -129,7 +131,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
 
         event.setCancelled(true);
 
-        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__BEGIN);
+        commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__BEGIN);
         try {
             if (!api.verify(event.getPlayer().getUniqueId(), message)) {
                 long attempts = CollectionProvider.getFrozen().compute(event.getPlayer().getUniqueId(), (k, v) -> {
@@ -140,7 +142,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                 });
 
                 if (cachedConfig.get().getMaxAttempts() <= 0L || attempts < cachedConfig.get().getMaxAttempts()) {
-                    CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_INVALID);
+                    commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_INVALID);
                 } else {
                     if (event.isAsynchronous()) {
                         Bukkit.getScheduler().runTask(plugin, () -> tryRunCommand(config.get(), event.getPlayer()));
@@ -155,9 +157,9 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         } catch (APIException ex) {
             if (ex.isHard()) {
                 logger.error(ex.getMessage(), ex);
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
+                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
             } else {
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_ERROR, "{error}", ex.getMessage());
+                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.VERIFY__FAILURE_ERROR, "{error}", ex.getMessage());
             }
             return;
         }
@@ -170,7 +172,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         }
 
         CollectionProvider.getFrozen().remove(event.getPlayer().getUniqueId());
-        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__SUCCESS);
+        commandManager.getCommandIssuer(event.getPlayer()).sendInfo(Message.VERIFY__SUCCESS);
     }
 
     private void tryRunCommand(Configuration config, Player player) {

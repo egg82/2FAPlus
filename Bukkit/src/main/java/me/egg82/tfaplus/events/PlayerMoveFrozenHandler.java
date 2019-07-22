@@ -21,6 +21,10 @@ public class PlayerMoveFrozenHandler implements Consumer<PlayerMoveEvent> {
 
     private final LoadingCache<UUID, Boolean> recentlyMoved = Caffeine.newBuilder().expireAfterWrite(10L, TimeUnit.SECONDS).build(k -> Boolean.FALSE);
 
+    private final CommandManager commandManager;
+
+    public PlayerMoveFrozenHandler(CommandManager commandManager) { this.commandManager = commandManager; }
+
     public void accept(PlayerMoveEvent event) {
         if (event.isCancelled()) {
             return;
@@ -43,7 +47,7 @@ public class PlayerMoveFrozenHandler implements Consumer<PlayerMoveEvent> {
         if (cachedConfig.get().getFreeze().getMove()) {
             if (!recentlyMoved.get(event.getPlayer().getUniqueId())) {
                 recentlyMoved.put(event.getPlayer().getUniqueId(), Boolean.TRUE);
-                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_MOVE);
+                commandManager.getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_MOVE);
             }
             event.setCancelled(true);
         }
