@@ -42,8 +42,8 @@ public class TFAPlusCommand extends BaseCommand {
     @Description("{@@description.register_totp}")
     @Syntax("<player>")
     @CommandCompletion("@player")
-    public void onRegisterTOTP(CommandSender sender, String playerName) {
-        new RegisterTOTPCommand(taskFactory.newChain(), sender, playerName).run();
+    public void onRegisterTOTP(CommandIssuer issuer, String playerName) {
+        new RegisterTOTPCommand(taskFactory.newChain(), issuer, playerName).run();
     }
 
     @Subcommand("register|create|add hotp")
@@ -51,8 +51,8 @@ public class TFAPlusCommand extends BaseCommand {
     @Description("{@@description.register_hotp}")
     @Syntax("<player>")
     @CommandCompletion("@player")
-    public void onRegisterHOTP(CommandSender sender, String playerName) {
-        new RegisterHOTPCommand(taskFactory.newChain(), sender, playerName).run();
+    public void onRegisterHOTP(CommandIssuer issuer, String playerName) {
+        new RegisterHOTPCommand(taskFactory.newChain(), issuer, playerName).run();
     }
 
     @Subcommand("delete|remove")

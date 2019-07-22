@@ -9,8 +9,6 @@ import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.services.lookup.PlayerLookup;
-import me.egg82.tfaplus.utils.LogUtil;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

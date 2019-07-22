@@ -1,5 +1,7 @@
 package me.egg82.tfaplus.commands.internal;
 
+import co.aikar.commands.CommandIssuer;
+import co.aikar.commands.CommandManager;
 import co.aikar.taskchain.TaskChain;
 import co.aikar.taskchain.TaskChainAbortAction;
 import java.io.IOException;
@@ -7,13 +9,12 @@ import java.util.Optional;
 import java.util.UUID;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
+import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.services.lookup.PlayerLookup;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import me.egg82.tfaplus.utils.LogUtil;
 import me.egg82.tfaplus.utils.MapUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.slf4j.Logger;
@@ -23,24 +24,24 @@ public class RegisterHOTPCommand implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final TaskChain<?> chain;
-    private final CommandSender sender;
+    private final CommandIssuer issuer;
     private final String playerName;
 
     private final TFAAPI api = TFAAPI.getInstance();
 
-    public RegisterHOTPCommand(TaskChain<?> chain, CommandSender sender, String playerName) {
+    public RegisterHOTPCommand(TaskChain<?> chain, CommandIssuer issuer, String playerName) {
         this.chain = chain;
-        this.sender = sender;
+        this.issuer = issuer;
         this.playerName = playerName;
     }
 
     public void run() {
-        if (!sender.getName().equals(playerName) && !sender.hasPermission("2faplus.admin")) {
-            sender.sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "You need the \"2faplus.admin\" permission node to register other players.");
+        if (!issuer.<CommandSender>getIssuer().getName().equals(playerName) && !issuer.hasPermission("2faplus.admin")) {
+            issuer.sendError(Message.ERROR__NEED_ADMIN_OTHER);
             return;
         }
 
-        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Registering " + ChatColor.WHITE + playerName + ChatColor.YELLOW + ", please wait..");
+        issuer.sendInfo(Message.REGISTER__BEGIN, "{player}", playerName);
 
         long initialCounterValue = 0L;
 
@@ -49,7 +50,7 @@ public class RegisterHOTPCommand implements Runnable {
                 .abortIfNull(new TaskChainAbortAction<Object, Object, Object>() {
                     @Override
                     public void onAbort(TaskChain<?> chain, Object arg1) {
-                        sender.sendMessage(ChatColor.DARK_RED + "Could not get UUID for " + ChatColor.WHITE + playerName + ChatColor.DARK_RED + " (rate-limited?)");
+                        issuer.sendError(Message.ERROR__NO_UUID, "{player}", playerName);
                     }
                 })
                 .<String>asyncCallback((v, f) -> {
@@ -67,12 +68,12 @@ public class RegisterHOTPCommand implements Runnable {
                 .abortIfNull(new TaskChainAbortAction<Object, Object, Object>() {
                     @Override
                     public void onAbort(TaskChain<?> chain, Object arg1) {
-                        sender.sendMessage(LogUtil.getHeading() + LogUtil.getHeading() + ChatColor.YELLOW + "Internal error");
+                        issuer.sendError(Message.ERROR__INTERNAL);
                     }
                 })
                 .syncLast(v -> {
                     if (v == null) {
-                        sender.sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Could not register " + ChatColor.WHITE + playerName);
+                        issuer.sendError(Message.REGISTER__FAILURE, "{player}", playerName);
                         return;
                     }
 
@@ -81,23 +82,23 @@ public class RegisterHOTPCommand implements Runnable {
                         return;
                     }
 
-                    Player player = Bukkit.getPlayer(getUuid(playerName));
+                    Optional<CommandIssuer> playerIssuer = getIssuer(getUuid(playerName));
 
-                    sender.sendMessage(LogUtil.getHeading() + ChatColor.WHITE + playerName + ChatColor.GREEN + " has been successfully registered.");
-                    if (player == null || !(sender instanceof Player) || player.getUniqueId() != ((Player) sender).getUniqueId()) {
-                        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Their 2FA account key is " + ChatColor.WHITE + v);
-                        if (sender instanceof Player) {
-                            sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You have been provided a scannable QR code for your convenience.");
-                            MapUtil.sendHOTPQRCode((Player) sender, v, config.get().getNode("otp", "issuer").getString(""), config.get().getNode("otp", "digits").getLong(), initialCounterValue);
+                    issuer.sendInfo(Message.REGISTER__SUCCESS, "{player}", playerName);
+                    if (!playerIssuer.isPresent() || !issuer.isPlayer() || playerIssuer.get().getUniqueId() != issuer.getUniqueId()) {
+                        issuer.sendInfo(Message.REGISTER__KEY_OTHER, "{key}", v);
+                        if (issuer.isPlayer()) {
+                            issuer.sendInfo(Message.REGISTER__QR_CODE);
+                            MapUtil.sendHOTPQRCode(issuer.getIssuer(), v, config.get().getNode("otp", "issuer").getString(""), config.get().getNode("otp", "digits").getLong(), initialCounterValue);
                         }
-                        sender.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please remember to keep this information PRIVATE!");
+                        issuer.sendInfo(Message.REGISTER__WARNING_PRIVACY);
                     }
 
-                    if (player != null) {
-                        player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Your 2FA account key is " + ChatColor.WHITE + v);
-                        player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You have been provided a scannable QR code for your convenience.");
-                        MapUtil.sendHOTPQRCode(player, v, config.get().getNode("otp", "issuer").getString(""), config.get().getNode("otp", "digits").getLong(), initialCounterValue);
-                        player.sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please remember to keep this key and QR code PRIVATE!");
+                    if (playerIssuer.isPresent()) {
+                        playerIssuer.get().sendInfo(Message.REGISTER__KEY, "{key}", v);
+                        playerIssuer.get().sendInfo(Message.REGISTER__QR_CODE);
+                        MapUtil.sendHOTPQRCode(issuer.getIssuer(), v, config.get().getNode("otp", "issuer").getString(""), config.get().getNode("otp", "digits").getLong(), initialCounterValue);
+                        playerIssuer.get().sendInfo(Message.REGISTER__WARNING_PRIVACY);
                     }
                 })
                 .execute();
@@ -110,5 +111,10 @@ public class RegisterHOTPCommand implements Runnable {
             logger.error(ex.getMessage(), ex);
             return null;
         }
+    }
+
+    private Optional<CommandIssuer> getIssuer(UUID uuid) {
+        Player player = Bukkit.getPlayer(uuid);
+        return player != null ? Optional.of(CommandManager.getCurrentCommandManager().getCommandIssuer(player)) : Optional.empty();
     }
 }

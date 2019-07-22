@@ -28,6 +28,10 @@ register:
   begin: "<c2>Registering</c2> {player}<c2>, please wait..</c2>"
   success: "{player} <c4>has been successfully registered.</c4>"
   failure: "Could not register <c4>{player}</c4>"
+  key: "<c2>Your 2FA account key is</c2> {key}"
+  key_other: "<c2>Their 2FA account key is</c2> {key}"
+  qr_code: "<c2>You have been provided a scannable QR code for your convenience.</c2>"
+  warning_privacy: "<c2>Please remember to keep this information</c2> <c5>PRIVATE!</c5>"
 
 seek:
   2fa_not_enabled: "You must have 2FA enabled for this command to have any affect."
