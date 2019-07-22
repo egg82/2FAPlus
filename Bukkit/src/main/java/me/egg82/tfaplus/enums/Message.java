@@ -24,6 +24,14 @@ public enum Message implements MessageKeyProvider {
     REGISTER__QR_CODE,
     REGISTER__WARNING_PRIVACY,
 
+    DELETE__BEGIN,
+    DELETE__SUCCESS,
+    DELETE__FAILURE,
+
+    CHECK__BEGIN,
+    CHECK__YES,
+    CHECK__NO,
+
     SEEK__2FA_NOT_ENABLED,
     SEEK__NEXT_CODES;
 

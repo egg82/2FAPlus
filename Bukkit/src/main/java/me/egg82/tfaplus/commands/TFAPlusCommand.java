@@ -60,8 +60,8 @@ public class TFAPlusCommand extends BaseCommand {
     @Description("{@@description.delete}")
     @Syntax("<player>")
     @CommandCompletion("@player")
-    public void onDelete(CommandSender sender, String playerName) {
-        new DeleteCommand(taskFactory.newChain(), sender, playerName).run();
+    public void onDelete(CommandIssuer issuer, String playerName) {
+        new DeleteCommand(taskFactory.newChain(), issuer, playerName).run();
     }
 
     @Subcommand("check")
@@ -69,8 +69,8 @@ public class TFAPlusCommand extends BaseCommand {
     @Description("{@@description.check}")
     @Syntax("<player>")
     @CommandCompletion("@player")
-    public void onCheck(CommandSender sender, String playerName) {
-        new CheckCommand(taskFactory.newChain(), sender, playerName).run();
+    public void onCheck(CommandIssuer issuer, String playerName) {
+        new CheckCommand(taskFactory.newChain(), issuer, playerName).run();
     }
 
     @CatchUnknown @Default

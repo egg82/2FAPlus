@@ -72,7 +72,7 @@ public class RegisterAuthyCommand implements Runnable {
                 })
                 .syncLast(v -> {
                     if (v) {
-                        issuer.sendError(Message.REGISTER__SUCCESS, "{player}", playerName);
+                        issuer.sendInfo(Message.REGISTER__SUCCESS, "{player}", playerName);
                     } else {
                         issuer.sendError(Message.REGISTER__FAILURE, "{player}", playerName);
                     }
