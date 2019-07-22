@@ -52,7 +52,13 @@ public class LanguageFileUtil {
                         double streamVersion = streamRoot.getNode("version").getDouble(1.0d);
 
                         if (streamVersion > fileVersion) {
-                            // Version update, delete file on disk
+                            // Version update, backup & delete file on disk
+                            File backupFile = new File(fileOnDisk.getParent(), fileOnDisk.getName() + ".bak");
+                            if (backupFile.exists()) {
+                                Files.delete(backupFile.toPath());
+                            }
+
+                            com.google.common.io.Files.copy(fileOnDisk, backupFile);
                             Files.delete(fileOnDisk.toPath());
                         }
                     }

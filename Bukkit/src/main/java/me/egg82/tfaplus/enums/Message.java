@@ -18,6 +18,8 @@ public enum Message implements MessageKeyProvider {
     ERROR__NO_UUID,
     ERROR__PLAYER_ONLY,
     ERROR__NEED_ADMIN_OTHER,
+    ERROR__NEED_AUTH_ACTION,
+    ERROR__NEED_AUTH_MOVE,
 
     RELOAD__BEGIN,
     RELOAD__END,

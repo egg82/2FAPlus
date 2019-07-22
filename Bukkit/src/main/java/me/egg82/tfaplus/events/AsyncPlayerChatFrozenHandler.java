@@ -1,5 +1,6 @@
 package me.egg82.tfaplus.events;
 
+import co.aikar.commands.CommandManager;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
+import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
@@ -55,7 +57,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                     } catch (APIException ex) {
                         if (ex.isHard()) {
                             logger.error(ex.getMessage(), ex);
-                            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Internal error");
+                            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
                         } else {
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your counter could not be re-synchronized using the codes provided. Please try again.");
                         }
@@ -82,7 +84,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                 } catch (APIException ex) {
                     if (ex.isHard()) {
                         logger.error(ex.getMessage(), ex);
-                        event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Internal error");
+                        CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
                     } else {
                         event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
                     }
@@ -114,7 +116,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         String message = event.getMessage().replaceAll("\\s+", "").trim();
         if (!message.matches("\\d+")) {
             if (cachedConfig.get().getFreeze().getChat()) {
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "You must first authenticate with your 2FA code before chatting!");
+                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
                 event.setCancelled(true);
             }
             return;
@@ -148,7 +150,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
         } catch (APIException ex) {
             if (ex.isHard()) {
                 logger.error(ex.getMessage(), ex);
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Internal error");
+                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__INTERNAL);
             } else {
                 event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
             }

@@ -25,6 +25,8 @@ error:
   no_uuid: "Could not get UUID for <c4>{player}</c4> (rate-limited?)"
   player_only: "Only players can perform this action."
   need_admin_other: "You need the <c4>2faplus.admin</c4> permission node to perform this action on other players."
+  need_auth_action: "You must first authenticate with your 2FA code before performing that action!"
+  need_auth_move: "You must first authenticate with your 2FA code before moving!"
 
 reload:
   begin: "<c2>Reloading, please wait..</c2>"

@@ -1,12 +1,12 @@
 package me.egg82.tfaplus.events;
 
+import co.aikar.commands.CommandManager;
 import java.util.Optional;
 import java.util.function.Consumer;
+import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import me.egg82.tfaplus.utils.LogUtil;
-import org.bukkit.ChatColor;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,7 @@ public class PlayerDropItemFrozenHandler implements Consumer<PlayerDropItemEvent
         }
 
         if (cachedConfig.get().getFreeze().getDrops()) {
-            event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "You must first authenticate with your 2FA code before dropping that!");
+            CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
             event.setCancelled(true);
         }
     }

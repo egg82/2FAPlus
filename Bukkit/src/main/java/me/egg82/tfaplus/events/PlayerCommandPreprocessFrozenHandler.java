@@ -1,9 +1,11 @@
 package me.egg82.tfaplus.events;
 
+import co.aikar.commands.CommandManager;
 import java.util.Optional;
 import java.util.function.Consumer;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
+import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.ConfigUtil;
@@ -31,7 +33,7 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
         if (CollectionProvider.getFrozen().containsKey(event.getPlayer().getUniqueId())) {
             if (cachedConfig.get().getFreeze().getCommand()) {
-                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "You must first authenticate with your 2FA code before running commands!");
+                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.ERROR__NEED_AUTH_ACTION);
                 event.setCancelled(true);
             }
         } else {
