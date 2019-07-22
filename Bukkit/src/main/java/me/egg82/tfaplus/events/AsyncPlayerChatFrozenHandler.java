@@ -61,7 +61,10 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                         } else {
                             event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Your counter could not be re-synchronized using the codes provided. Please try again.");
                         }
+                        return;
                     }
+
+                    event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.GREEN + "Successfully re-synchronized your counter.");
                 } else {
                     event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.WHITE + (pair.getFirst() - pair.getSecond().size()) + ChatColor.YELLOW + " more code" + (pair.getFirst() - pair.getSecond().size() > 1 ? "s" : "") + " to go!");
                 }
@@ -88,6 +91,7 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
                     } else {
                         event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
                     }
+                    return;
                 }
 
                 String command = CollectionProvider.getCommandFrozen().remove(event.getPlayer().getUniqueId());
@@ -154,12 +158,14 @@ public class AsyncPlayerChatFrozenHandler implements Consumer<AsyncPlayerChatEve
             } else {
                 event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "Something went wrong while validating your 2FA code: " + ex.getMessage());
             }
+            return;
         }
 
         try {
             InternalAPI.setLogin(event.getPlayer().getUniqueId(), getIp(event.getPlayer()));
         } catch (APIException ex) {
             logger.error(ex.getMessage(), ex);
+            return;
         }
 
         CollectionProvider.getFrozen().remove(event.getPlayer().getUniqueId());

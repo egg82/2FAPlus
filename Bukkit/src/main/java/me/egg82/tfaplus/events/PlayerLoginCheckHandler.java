@@ -1,10 +1,12 @@
 package me.egg82.tfaplus.events;
 
+import co.aikar.commands.CommandManager;
 import java.net.InetAddress;
 import java.util.Optional;
 import java.util.function.Consumer;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
+import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.hooks.PlaceholderAPIHook;
@@ -93,7 +95,7 @@ public class PlayerLoginCheckHandler implements Consumer<PlayerLoginEvent> {
         }
 
         CollectionProvider.getFrozen().put(event.getPlayer().getUniqueId(), 0L);
-        Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat."));
+        Bukkit.getScheduler().runTask(plugin, () -> CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE));
         if (ConfigUtil.getDebugOrFalse()) {
             logger.info(LogUtil.getHeading() + ChatColor.WHITE + event.getPlayer().getName() + ChatColor.YELLOW + " has been sent a verification request.");
         }

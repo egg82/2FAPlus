@@ -28,6 +28,11 @@ error:
   need_auth_action: "You must first authenticate with your 2FA code before performing that action!"
   need_auth_move: "You must first authenticate with your 2FA code before moving!"
 
+player:
+  enter_code: "<c2>Please enter your 2FA code into the chat.</c2>"
+  error_protected: "2FA registration is required to use protected commands!"
+  warning_protected: "<c2>You are attempting to run a protected command:</c2> /{command}"
+
 reload:
   begin: "<c2>Reloading, please wait..</c2>"
   end: "<c4>Configuration reloaded!</c4>"

@@ -9,8 +9,6 @@ import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.services.CollectionProvider;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import me.egg82.tfaplus.utils.LogUtil;
-import org.bukkit.ChatColor;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,12 +51,12 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
                         try {
                             if (!api.isRegistered(event.getPlayer().getUniqueId())) {
-                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
+                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.PLAYER__ERROR_PROTECTED);
                                 event.setCancelled(true);
                             } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                                 CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
-                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
-                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
+                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__WARNING_PROTECTED, "{command}", event.getMessage());
+                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE);
                                 event.setCancelled(true);
                             }
                         } catch (APIException ex) {
@@ -79,12 +77,12 @@ public class PlayerCommandPreprocessFrozenHandler implements Consumer<PlayerComm
 
                         try {
                             if (!api.isRegistered(event.getPlayer().getUniqueId())) {
-                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.DARK_RED + "2FA registration is required to use protected commands!");
+                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendError(Message.PLAYER__ERROR_PROTECTED);
                                 event.setCancelled(true);
                             } else if (!api.isVerified(event.getPlayer().getUniqueId(), true)) {
                                 CollectionProvider.getCommandFrozen().put(event.getPlayer().getUniqueId(), message);
-                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "You are attempting to run a protected command: " + ChatColor.WHITE + event.getMessage());
-                                event.getPlayer().sendMessage(LogUtil.getHeading() + ChatColor.YELLOW + "Please enter your 2FA code into the chat.");
+                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__WARNING_PROTECTED, "{command}", event.getMessage());
+                                CommandManager.getCurrentCommandManager().getCommandIssuer(event.getPlayer()).sendInfo(Message.PLAYER__ENTER_CODE);
                                 event.setCancelled(true);
                             }
                         } catch (APIException ex) {

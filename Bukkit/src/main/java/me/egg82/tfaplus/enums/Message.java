@@ -21,6 +21,10 @@ public enum Message implements MessageKeyProvider {
     ERROR__NEED_AUTH_ACTION,
     ERROR__NEED_AUTH_MOVE,
 
+    PLAYER__ENTER_CODE,
+    PLAYER__ERROR_PROTECTED,
+    PLAYER__WARNING_PROTECTED,
+
     RELOAD__BEGIN,
     RELOAD__END,
 
