@@ -29,7 +29,7 @@ public class MySQL {
             cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "login` ("
                     + "`ip` VARCHAR(45) NOT NULL,"
                     + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
                     + ");");
             cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "login` ADD UNIQUE (`ip`, `uuid`);");
         }
@@ -65,8 +65,8 @@ public class MySQL {
             cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "login_queue` ("
                     + "`ip` VARCHAR(45) NOT NULL,"
                     + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                    + "`updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
                     + ");");
             cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "login_queue` ADD UNIQUE (`ip`, `uuid`);");
         }
@@ -75,7 +75,7 @@ public class MySQL {
             cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "authy_queue` ("
                     + "`uuid` VARCHAR(36) NOT NULL,"
                     + "`id` BIGINT NOT NULL DEFAULT 0,"
-                    + "`updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
                     + ");");
             cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "authy_queue` ADD UNIQUE (`uuid`);");
         }
@@ -85,7 +85,7 @@ public class MySQL {
                     + "`uuid` VARCHAR(36) NOT NULL,"
                     + "`length` BIGINT NOT NULL DEFAULT 0,"
                     + "`key` BLOB NOT NULL,"
-                    + "`updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
                     + ");");
             cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "totp_queue` ADD UNIQUE (`uuid`);");
         }
@@ -96,7 +96,7 @@ public class MySQL {
                     + "`length` BIGINT NOT NULL DEFAULT 0,"
                     + "`counter` BIGINT NOT NULL DEFAULT 0,"
                     + "`key` BLOB NOT NULL,"
-                    + "`updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
                     + ");");
             cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "hotp_queue` ADD UNIQUE (`uuid`);");
         }

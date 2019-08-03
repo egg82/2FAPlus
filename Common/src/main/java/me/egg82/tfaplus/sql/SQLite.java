@@ -29,7 +29,7 @@ public class SQLite {
             cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "login` ("
                     + "`ip` TEXT(45) NOT NULL,"
                     + "`uuid` TEXT(36) NOT NULL DEFAULT 0,"
-                    + "`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                    + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                     + "UNIQUE(`ip`, `uuid`)"
                     + ");");
         }
