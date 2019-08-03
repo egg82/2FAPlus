@@ -52,6 +52,9 @@ public class CachedConfigValues {
     private SQLType sqlType = SQLType.SQLite;
     public SQLType getSQLType() { return sqlType; }
 
+    private String tablePrefix = null;
+    public String getTablePrefix() { return tablePrefix; }
+
     private String serverName = null;
     public String getServerName() { return serverName; }
 
@@ -145,6 +148,14 @@ public class CachedConfigValues {
                 throw new IllegalArgumentException("value cannot be null.");
             }
             values.sqlType = SQLType.getByName(value);
+            return this;
+        }
+
+        public CachedConfigValues.Builder tablePrefix(String value) {
+            if (value == null) {
+                throw new IllegalArgumentException("value cannot be null.");
+            }
+            values.tablePrefix = value;
             return this;
         }
 

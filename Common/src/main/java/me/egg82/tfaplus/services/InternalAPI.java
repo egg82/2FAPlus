@@ -128,10 +128,13 @@ public class InternalAPI {
         // Update SQL
         LoginData sqlResult = null;
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                sqlResult = MySQL.updateLogin(uuid, ip);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                sqlResult = SQLite.updateLogin(uuid, ip);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    sqlResult = MySQL.updateLogin(uuid, ip);
+                    break;
+                case SQLite:
+                    sqlResult = SQLite.updateLogin(uuid, ip);
+                    break;
             }
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
@@ -203,10 +206,13 @@ public class InternalAPI {
         // Update SQL
         HOTPData sqlResult = null;
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                sqlResult = MySQL.updateHOTP(uuid, codeLength, initialCounter, key);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                sqlResult = SQLite.updateHOTP(uuid, codeLength, initialCounter, key);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    sqlResult = MySQL.updateHOTP(uuid, codeLength, initialCounter, key);
+                    break;
+                case SQLite:
+                    sqlResult = SQLite.updateHOTP(uuid, codeLength, initialCounter, key);
+                    break;
             }
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
@@ -253,10 +259,13 @@ public class InternalAPI {
         // Update SQL
         TOTPData sqlResult = null;
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                sqlResult = MySQL.updateTOTP(uuid, codeLength, key);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                sqlResult = SQLite.updateTOTP(uuid, codeLength, key);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    sqlResult = MySQL.updateTOTP(uuid, codeLength, key);
+                    break;
+                case SQLite:
+                    sqlResult = SQLite.updateTOTP(uuid, codeLength, key);
+                    break;
             }
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
@@ -303,10 +312,13 @@ public class InternalAPI {
         // Update SQL
         AuthyData sqlResult = null;
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                sqlResult = MySQL.updateAuthy(uuid, user.getId());
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                sqlResult = SQLite.updateAuthy(uuid, user.getId());
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    sqlResult = MySQL.updateAuthy(uuid, user.getId());
+                    break;
+                case SQLite:
+                    sqlResult = SQLite.updateAuthy(uuid, user.getId());
+                    break;
             }
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
@@ -339,10 +351,13 @@ public class InternalAPI {
         if (cachedConfig.get().getAuthy().isPresent()) {
             Optional<AuthyData> sqlResult = Optional.empty();
             try {
-                if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                    sqlResult = MySQL.getAuthyData(uuid);
-                } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                    sqlResult = SQLite.getAuthyData(uuid);
+                switch (cachedConfig.get().getSQLType()) {
+                    case MySQL:
+                        sqlResult = MySQL.getAuthyData(uuid);
+                        break;
+                    case SQLite:
+                        sqlResult = SQLite.getAuthyData(uuid);
+                        break;
                 }
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
@@ -367,10 +382,13 @@ public class InternalAPI {
 
         // Delete SQL
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                MySQL.delete(uuid);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                SQLite.delete(uuid);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    MySQL.delete(uuid);
+                    break;
+                case SQLite:
+                    SQLite.delete(uuid);
+                    break;
             }
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
@@ -685,10 +703,13 @@ public class InternalAPI {
         // Update SQL
         HOTPData sqlResult = null;
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                sqlResult = MySQL.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                sqlResult = SQLite.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    sqlResult = MySQL.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
+                    break;
+                case SQLite:
+                    sqlResult = SQLite.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
+                    break;
             }
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
@@ -720,10 +741,13 @@ public class InternalAPI {
         // Update SQL
         HOTPData sqlResult = null;
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                sqlResult = MySQL.updateHOTP(uuid, length, counter, key);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                sqlResult = SQLite.updateHOTP(uuid, length, counter, key);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    sqlResult = MySQL.updateHOTP(uuid, length, counter, key);
+                    break;
+                case SQLite:
+                    sqlResult = SQLite.updateHOTP(uuid, length, counter, key);
+                    break;
             }
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
@@ -876,10 +900,13 @@ public class InternalAPI {
         // SQL
         try {
             Optional<LoginData> result = Optional.empty();
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                result = MySQL.getLoginData(uuid, ip);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                result = SQLite.getLoginData(uuid, ip);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    result = MySQL.getLoginData(uuid, ip);
+                    break;
+                case SQLite:
+                    result = SQLite.getLoginData(uuid, ip);
+                    break;
             }
 
             if (result.isPresent()) {
@@ -921,10 +948,13 @@ public class InternalAPI {
         // SQL
         try {
             Optional<TOTPData> result = Optional.empty();
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                result = MySQL.getTOTPData(uuid);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                result = SQLite.getTOTPData(uuid);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    result = MySQL.getTOTPData(uuid);
+                    break;
+                case SQLite:
+                    result = SQLite.getTOTPData(uuid);
+                    break;
             }
 
             if (result.isPresent()) {
@@ -966,10 +996,13 @@ public class InternalAPI {
         // SQL
         try {
             Optional<HOTPData> result = Optional.empty();
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                result = MySQL.getHOTPData(uuid);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                result = SQLite.getHOTPData(uuid);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    result = MySQL.getHOTPData(uuid);
+                    break;
+                case SQLite:
+                    result = SQLite.getHOTPData(uuid);
+                    break;
             }
 
             if (result.isPresent()) {
@@ -1011,10 +1044,13 @@ public class InternalAPI {
         // SQL
         try {
             Optional<AuthyData> result = Optional.empty();
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                result = MySQL.getAuthyData(uuid);
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                result = SQLite.getAuthyData(uuid);
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    result = MySQL.getAuthyData(uuid);
+                    break;
+                case SQLite:
+                    result = SQLite.getAuthyData(uuid);
+                    break;
             }
 
             if (result.isPresent()) {

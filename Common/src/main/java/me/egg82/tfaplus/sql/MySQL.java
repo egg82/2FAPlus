@@ -13,102 +13,17 @@ import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
-import ninja.leaping.configurate.ConfigurationNode;
 
 public class MySQL {
     private MySQL() {}
 
-    public static void createTables() throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        if (!tableExists(tablePrefix + "login")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "login` ("
-                    + "`ip` VARCHAR(45) NOT NULL,"
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "login` ADD UNIQUE (`ip`, `uuid`);");
-        }
-
-        if (!tableExists(tablePrefix + "authy")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "authy` ("
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`id` BIGINT NOT NULL DEFAULT 0"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "authy` ADD UNIQUE (`uuid`);");
-        }
-
-        if (!tableExists(tablePrefix + "totp")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "totp` ("
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`length` BIGINT NOT NULL DEFAULT 0,"
-                    + "`key` BLOB NOT NULL"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "totp` ADD UNIQUE (`uuid`);");
-        }
-
-        if (!tableExists(tablePrefix + "hotp")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "hotp` ("
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`length` BIGINT NOT NULL DEFAULT 0,"
-                    + "`counter` BIGINT NOT NULL DEFAULT 0,"
-                    + "`key` BLOB NOT NULL"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "hotp` ADD UNIQUE (`uuid`);");
-        }
-
-        if (!tableExists(tablePrefix + "login_queue")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "login_queue` ("
-                    + "`ip` VARCHAR(45) NOT NULL,"
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "login_queue` ADD UNIQUE (`ip`, `uuid`);");
-        }
-
-        if (!tableExists(tablePrefix + "authy_queue")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "authy_queue` ("
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`id` BIGINT NOT NULL DEFAULT 0,"
-                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "authy_queue` ADD UNIQUE (`uuid`);");
-        }
-
-        if (!tableExists(tablePrefix + "totp_queue")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "totp_queue` ("
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`length` BIGINT NOT NULL DEFAULT 0,"
-                    + "`key` BLOB NOT NULL,"
-                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "totp_queue` ADD UNIQUE (`uuid`);");
-        }
-
-        if (!tableExists(tablePrefix + "hotp_queue")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "hotp_queue` ("
-                    + "`uuid` VARCHAR(36) NOT NULL,"
-                    + "`length` BIGINT NOT NULL DEFAULT 0,"
-                    + "`counter` BIGINT NOT NULL DEFAULT 0,"
-                    + "`key` BLOB NOT NULL,"
-                    + "`updated` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                    + ");");
-            cachedConfig.get().getSQL().execute("ALTER TABLE `" + tablePrefix + "hotp_queue` ADD UNIQUE (`uuid`);");
-        }
-    }
-
     public static SQLFetchResult loadInfo() throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         List<LoginData> loginData = new ArrayList<>();
         List<AuthyData> authyData = new ArrayList<>();
         List<TOTPData> totpData = new ArrayList<>();
@@ -236,12 +151,12 @@ public class MySQL {
     }
 
     public static SQLFetchResult fetchQueue() throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         List<LoginData> loginData = new ArrayList<>();
         List<AuthyData> authyData = new ArrayList<>();
         List<TOTPData> totpData = new ArrayList<>();
@@ -374,12 +289,12 @@ public class MySQL {
     }
 
     public static Optional<LoginData> getLoginData(UUID uuid, String ip) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         LoginData data = null;
 
         try {
@@ -399,12 +314,12 @@ public class MySQL {
     }
 
     public static Optional<AuthyData> getAuthyData(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         AuthyData data = null;
 
         try {
@@ -424,12 +339,12 @@ public class MySQL {
     }
 
     public static Optional<TOTPData> getTOTPData(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         TOTPData data = null;
 
         try {
@@ -450,12 +365,12 @@ public class MySQL {
     }
 
     public static Optional<HOTPData> getHOTPData(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         HOTPData data = null;
 
         try {
@@ -477,12 +392,12 @@ public class MySQL {
     }
 
     public static LoginData updateLogin(UUID uuid, String ip) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         LoginData result = null;
 
         try {
@@ -507,12 +422,12 @@ public class MySQL {
     }
 
     public static AuthyData updateAuthy(UUID uuid, long id) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         AuthyData result = null;
 
         try {
@@ -536,12 +451,12 @@ public class MySQL {
     }
 
     public static TOTPData updateTOTP(UUID uuid, long length, SecretKey key) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         TOTPData result = null;
 
         try {
@@ -565,12 +480,12 @@ public class MySQL {
     }
 
     public static HOTPData updateHOTP(UUID uuid, long length, long counter, SecretKey key) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         HOTPData result = null;
 
         try {
@@ -594,11 +509,12 @@ public class MySQL {
     }
 
     public static void delete(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid.toString());
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid.toString());
@@ -624,33 +540,5 @@ public class MySQL {
         }
 
         throw new APIException(true, "Could not get time from SQL.");
-    }
-
-    private static boolean tableExists(String tableName) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-
-        if (!cachedConfig.isPresent() || storageConfigNode == null) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String databaseName = storageConfigNode.getNode("data", "database").getString();
-
-        SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name=?;", databaseName, tableName);
-        return query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0;
-    }
-
-    private static String getTablePrefix() throws APIException {
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-
-        if (storageConfigNode == null) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
-        if (tablePrefix.charAt(tablePrefix.length() - 1) != '_') {
-            tablePrefix = tablePrefix + "_";
-        }
-        return tablePrefix;
     }
 }

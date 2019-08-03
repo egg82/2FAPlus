@@ -2,8 +2,7 @@ package me.egg82.tfaplus.enums;
 
 public enum SQLType {
     MySQL("mysql"),
-    SQLite("sqlite"),
-    UNKNOWN("unknown");
+    SQLite("sqlite");
 
     private final String name;
     SQLType(String name) {
@@ -19,6 +18,6 @@ public enum SQLType {
                 return value;
             }
         }
-        return UNKNOWN;
+        return null;
     }
 }

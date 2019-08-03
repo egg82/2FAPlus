@@ -185,6 +185,7 @@ public class ConfigurationFileUtil {
                 .rabbitConnectionFactory(getRabbitConnectionFactory(config.getNode("rabbitmq")))
                 .sql(getSQL(plugin, config.getNode("storage")))
                 .sqlType(config.getNode("storage", "method").getString("sqlite"))
+                .tablePrefix(getTablePrefix(config.getNode("storage")))
                 .serverName(ServerNameUtil.getName(new File(plugin.getDataFolder(), "server-name.txt")))
                 .authy(getAuthy(config.getNode("authy", "key").getString(""), debug))
                 .build();
@@ -259,18 +260,21 @@ public class ConfigurationFileUtil {
 
     private static SQL getSQL(Plugin plugin, ConfigurationNode storageConfigNode) {
         SQLType type = SQLType.getByName(storageConfigNode.getNode("method").getString("sqlite"));
-        if (type == SQLType.UNKNOWN) {
+        if (type == null) {
             logger.warn("storage.method is an unknown value. Using default value.");
             type = SQLType.SQLite;
         }
 
         HikariConfig hikariConfig = new HikariConfig();
-        if (type == SQLType.MySQL) {
-            hikariConfig.setJdbcUrl("jdbc:mysql://" + storageConfigNode.getNode("data", "address").getString("127.0.0.1:3306") + "/" + storageConfigNode.getNode("data", "database").getString("2faplus"));
-            hikariConfig.setConnectionTestQuery("SELECT 1;");
-        } else if (type == SQLType.SQLite) {
-            hikariConfig.setJdbcUrl("jdbc:sqlite:" + new File(plugin.getDataFolder(), storageConfigNode.getNode("data", "database").getString("2faplus") + ".db").getAbsolutePath());
-            hikariConfig.setConnectionTestQuery("SELECT 1;");
+        switch (type) {
+            case MySQL:
+                hikariConfig.setJdbcUrl("jdbc:mysql://" + storageConfigNode.getNode("data", "address").getString("127.0.0.1:3306") + "/" + storageConfigNode.getNode("data", "database").getString("2faplus"));
+                hikariConfig.setConnectionTestQuery("SELECT 1;");
+                break;
+            case SQLite:
+                hikariConfig.setJdbcUrl("jdbc:sqlite:" + new File(plugin.getDataFolder(), storageConfigNode.getNode("data", "database").getString("2faplus") + ".db").getAbsolutePath());
+                hikariConfig.setConnectionTestQuery("SELECT 1;");
+                break;
         }
         hikariConfig.setUsername(storageConfigNode.getNode("data", "username").getString(""));
         hikariConfig.setPassword(storageConfigNode.getNode("data", "password").getString(""));
@@ -305,6 +309,14 @@ public class ConfigurationFileUtil {
         }
 
         return new SQL(hikariConfig);
+    }
+
+    private static String getTablePrefix(ConfigurationNode storageConfigNode) {
+        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
+        if (tablePrefix.charAt(tablePrefix.length() - 1) != '_') {
+            tablePrefix = tablePrefix + "_";
+        }
+        return tablePrefix;
     }
 
     private static JedisPool getRedisPool(ConfigurationNode redisConfigNode) {

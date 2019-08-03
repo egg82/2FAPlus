@@ -18,57 +18,13 @@ import ninja.leaping.configurate.ConfigurationNode;
 public class SQLite {
     private SQLite() {}
 
-    public static void createTables() throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        if (!tableExists(tablePrefix + "login")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "login` ("
-                    + "`ip` TEXT(45) NOT NULL,"
-                    + "`uuid` TEXT(36) NOT NULL DEFAULT 0,"
-                    + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                    + "UNIQUE(`ip`, `uuid`)"
-                    + ");");
-        }
-
-        if (!tableExists(tablePrefix + "authy")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "authy` ("
-                    + "`uuid` TEXT(36) NOT NULL,"
-                    + "`id` INTEGER NOT NULL DEFAULT 0,"
-                    + "UNIQUE(`uuid`)"
-                    + ");");
-        }
-
-        if (!tableExists(tablePrefix + "totp")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "totp` ("
-                    + "`uuid` TEXT(36) NOT NULL,"
-                    + "`length` INTEGER NOT NULL DEFAULT 0,"
-                    + "`key` BLOB NOT NULL,"
-                    + "UNIQUE(`uuid`)"
-                    + ");");
-        }
-
-        if (!tableExists(tablePrefix + "hotp")) {
-            cachedConfig.get().getSQL().execute("CREATE TABLE `" + tablePrefix + "hotp` ("
-                    + "`uuid` TEXT(36) NOT NULL,"
-                    + "`length` INTEGER NOT NULL DEFAULT 0,"
-                    + "`counter` INTEGER NOT NULL DEFAULT 0,"
-                    + "`key` BLOB NOT NULL,"
-                    + "UNIQUE(`uuid`)"
-                    + ");");
-        }
-    }
-
     public static SQLFetchResult loadInfo() throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         List<LoginData> loginData = new ArrayList<>();
         List<AuthyData> authyData = new ArrayList<>();
         List<TOTPData> totpData = new ArrayList<>();
@@ -196,12 +152,12 @@ public class SQLite {
     }
 
     public static Optional<LoginData> getLoginData(UUID uuid, String ip) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         LoginData data = null;
 
         try {
@@ -221,12 +177,12 @@ public class SQLite {
     }
 
     public static Optional<AuthyData> getAuthyData(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         AuthyData data = null;
 
         try {
@@ -246,12 +202,12 @@ public class SQLite {
     }
 
     public static Optional<TOTPData> getTOTPData(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         TOTPData data = null;
 
         try {
@@ -272,12 +228,12 @@ public class SQLite {
     }
 
     public static Optional<HOTPData> getHOTPData(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         HOTPData data = null;
 
         try {
@@ -299,12 +255,12 @@ public class SQLite {
     }
 
     public static LoginData updateLogin(UUID uuid, String ip) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
 
+        String tablePrefix = cachedConfig.get().getTablePrefix();
         LoginData result = null;
 
         try {
@@ -323,84 +279,92 @@ public class SQLite {
     }
 
     public static AuthyData updateAuthy(UUID uuid, long id) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "authy` (`uuid`, `id`) VALUES(?, ?);", uuid.toString(), id);
         return new AuthyData(uuid, id);
     }
 
     public static TOTPData updateTOTP(UUID uuid, long length, SecretKey key) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES(?, ?, ?);", uuid.toString(), length, key.getEncoded());
         return new TOTPData(uuid, length, key);
     }
 
     public static HOTPData updateHOTP(UUID uuid, long length, long counter, SecretKey key) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "hotp` (`uuid`, `length`, `counter`, `key`) VALUES(?, ?, ?, ?);", uuid.toString(), length, counter, key.getEncoded());
         return new HOTPData(uuid, length, counter, key);
     }
 
     public static void addLogin(LoginData data) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "login` (`uuid`, `ip`, `created`) VALUES (?, ?, ?);", data.getUUID().toString(), data.getIP(), data.getCreated());
     }
 
     public static void addAuthy(AuthyData data) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "authy` (`uuid`, `id`) VALUES (?, ?);", data.getUUID().toString(), data.getID());
     }
 
     public static void addTOTP(TOTPData data) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES (?, ?, ?);", data.getUUID().toString(), data.getLength(), data.getKey().getEncoded());
     }
 
     public static void addHOTP(HOTPData data) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "hotp` (`uuid`, `length`, `counter`, `key`) VALUES (?, ?, ?, ?);", data.getUUID().toString(), data.getLength(), data.getCounter(), data.getKey().getEncoded());
     }
 
     public static void delete(UUID uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid.toString());
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid.toString());
@@ -409,11 +373,12 @@ public class SQLite {
     }
 
     public static void delete(String uuid) throws APIException, SQLException {
-        String tablePrefix = getTablePrefix();
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get required configuration.");
         }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
 
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid);
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid);
@@ -448,31 +413,5 @@ public class SQLite {
             return new Timestamp(((Number) o).longValue());
         }
         throw new APIException(true, "Could not parse time.");
-    }
-
-    private static boolean tableExists(String tableName) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-
-        if (!cachedConfig.isPresent() || storageConfigNode == null) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?;", tableName);
-        return query.getData().length > 0 && query.getData()[0].length > 0 && ((Number) query.getData()[0][0]).intValue() != 0;
-    }
-
-    private static String getTablePrefix() throws APIException {
-        ConfigurationNode storageConfigNode = ConfigUtil.getStorageNodeOrNull();
-
-        if (storageConfigNode == null) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = !storageConfigNode.getNode("data", "prefix").getString("").isEmpty() ? storageConfigNode.getNode("data", "prefix").getString() : "2faplus_";
-        if (tablePrefix.charAt(tablePrefix.length() - 1) != '_') {
-            tablePrefix = tablePrefix + "_";
-        }
-        return tablePrefix;
     }
 }

@@ -64,12 +64,15 @@ public class ServiceUtil {
         }
 
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                MySQL.createTables();
-                Redis.updateFromQueue(MySQL.loadInfo());
-            } else if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
-                SQLite.createTables();
-                Redis.updateFromQueue(SQLite.loadInfo());
+            SQLVersionUtil.conformVersion(cachedConfig.get().getSQLType(), cachedConfig.get().getSQL(), cachedConfig.get().getTablePrefix());
+
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    Redis.updateFromQueue(MySQL.loadInfo());
+                    break;
+                case SQLite:
+                    Redis.updateFromQueue(SQLite.loadInfo());
+                    break;
             }
         } catch (APIException | SQLException ex) {
             logger.error(ex.getMessage(), ex);
