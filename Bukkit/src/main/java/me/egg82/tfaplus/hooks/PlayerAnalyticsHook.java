@@ -74,17 +74,20 @@ public class PlayerAnalyticsHook implements PluginHook {
             iconFamily = Family.SOLID,
             color = Color.GREEN
     )
-    class Data implements DataExtension {
+    public class Data implements DataExtension {
         private final TFAAPI api = TFAAPI.getInstance();
 
         private Data() { }
 
         @BooleanProvider(
                 text = "Is Registered",
-                description = "Whether or not the player is registered with any kind of 2FA."
+                description = "Whether or not the player is registered with any kind of 2FA.",
+                iconName = "fingerprint",
+                iconFamily = Family.SOLID,
+                iconColor = Color.GREY
         )
         public boolean isPlayerRegistered(UUID uuid) throws APIException { return api.isRegistered(uuid); }
 
-        public CallEvents[] callExtensionMethodsOn() { return new CallEvents[] { CallEvents.MANUAL }; }
+        public CallEvents[] callExtensionMethodsOn() { return new CallEvents[] { CallEvents.PLAYER_JOIN, CallEvents.PLAYER_LEAVE, CallEvents.MANUAL }; }
     }
 }
