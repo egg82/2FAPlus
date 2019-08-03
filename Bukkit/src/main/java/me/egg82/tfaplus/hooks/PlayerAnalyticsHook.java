@@ -1,13 +1,14 @@
 package me.egg82.tfaplus.hooks;
 
-import com.djrapitops.plan.api.PlanAPI;
-import com.djrapitops.plan.data.element.AnalysisContainer;
-import com.djrapitops.plan.data.element.InspectContainer;
-import com.djrapitops.plan.data.plugin.ContainerSize;
-import com.djrapitops.plan.data.plugin.PluginData;
-import com.djrapitops.plan.utilities.html.icon.Color;
-import com.djrapitops.plan.utilities.html.icon.Icon;
-import java.util.Collection;
+import com.djrapitops.plan.capability.CapabilityService;
+import com.djrapitops.plan.extension.CallEvents;
+import com.djrapitops.plan.extension.Caller;
+import com.djrapitops.plan.extension.DataExtension;
+import com.djrapitops.plan.extension.ExtensionService;
+import com.djrapitops.plan.extension.annotation.BooleanProvider;
+import com.djrapitops.plan.extension.annotation.PluginInfo;
+import com.djrapitops.plan.extension.icon.Color;
+import com.djrapitops.plan.extension.icon.Family;
 import java.util.Optional;
 import java.util.UUID;
 import me.egg82.tfaplus.APIException;
@@ -18,45 +19,72 @@ import org.slf4j.LoggerFactory;
 public class PlayerAnalyticsHook implements PluginHook {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    public PlayerAnalyticsHook() { PlanAPI.getInstance().addPluginDataSource(new Data()); }
+    private boolean enabled = false;
+    private Caller caller;
+
+    public PlayerAnalyticsHook() {
+        if (!registerExtension()) {
+            return;
+        }
+        enabled = true;
+
+        CapabilityService.getInstance().registerEnableListener(enabled -> {
+            if (enabled) {
+                this.enabled = registerExtension();
+            } else {
+                this.enabled = false;
+            }
+        });
+    }
 
     public void cancel() {}
 
-    class Data extends PluginData {
+    public void update(UUID uuid, String name) {
+        if (enabled) {
+            caller.updatePlayerData(uuid, name);
+        }
+    }
+
+    private boolean registerExtension() {
+        try {
+            if (!CapabilityService.getInstance().hasCapability("DATA_EXTENSION_VALUES")) {
+                logger.error("Your version of Plan is outdated.");
+                return false;
+            }
+
+            DataExtension extension = new Data();
+            Optional<Caller> caller = ExtensionService.getInstance().register(extension);
+            if (!caller.isPresent()) {
+                logger.error("Could not register data extension for Plan.");
+                return false;
+            }
+            this.caller = caller.get();
+            return true;
+        } catch (NoClassDefFoundError ex) {
+            logger.error("Your version of Plan is outdated.", ex);
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            logger.error("Could not register data extension for Plan.", ex);
+        }
+        return false;
+    }
+
+    @PluginInfo(
+            name = "2FA+",
+            iconName = "mobile-alt",
+            iconFamily = Family.SOLID,
+            color = Color.GREEN
+    )
+    class Data implements DataExtension {
         private final TFAAPI api = TFAAPI.getInstance();
 
-        private Data() {
-            super(ContainerSize.THIRD, "2FAPlus");
-            setPluginIcon(Icon.called("mobile-alt").of(Color.GREEN).build());
-        }
+        private Data() { }
 
-        public InspectContainer getPlayerData(UUID uuid, InspectContainer container) {
-            Optional<Boolean> registered = Optional.empty();
-            try {
-                registered = Optional.of(api.isRegistered(uuid));
-            } catch (APIException ex) {
-                logger.error(ex.getMessage(), ex);
-            }
+        @BooleanProvider(
+                text = "Is Registered",
+                description = "Whether or not the player is registered with any kind of 2FA."
+        )
+        public boolean isPlayerRegistered(UUID uuid) throws APIException { return api.isRegistered(uuid); }
 
-            container.addValue("Is Registered", registered.isPresent() ? (registered.get() ? "Yes" : "No") : "ERROR");
-            return container;
-        }
-
-        public AnalysisContainer getServerData(Collection<UUID> uuids, AnalysisContainer container) {
-            int registrations = 0;
-            for (UUID uuid : uuids) {
-                try {
-                    if (api.isRegistered(uuid)) {
-                        registrations++;
-                    }
-                } catch (APIException ex) {
-                    logger.error(ex.getMessage(), ex);
-                }
-            }
-
-            container.addValue("Registered Players", registrations);
-
-            return container;
-        }
+        public CallEvents[] callExtensionMethodsOn() { return new CallEvents[] { CallEvents.MANUAL }; }
     }
 }

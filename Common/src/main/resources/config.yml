@@ -85,14 +85,14 @@ otp:
   # The number of digits to generate
   digits: 6
   # The business/organization name that shows up on the 2FA app when scanning the QR code
-  issuer: '2FAPlus'
+  issuer: '2FA+'
 
 2fa:
   # When a player successfully authenticates, their UUID and IP is stored in a database
   # This IP is kept in the database for the below amount of time before being removed
   # While this IP is in the database, any time they log in from the IP they will not need to re-authenticate
   ip-lifetime: '30days'
-  # 2FAPlus can protect specific commands from being run without first authenticating
+  # 2FA+ can protect specific commands from being run without first authenticating
   # Since this can get pretty annoying pretty quickly, the plugin sets a timer on the first successful 2FA attempt
   # While this timer is active, 2FA is not required for future verification attempts unless otherwise stated and/or explicitly called via the API
   # The timer resets every time a 2FA verification is required
@@ -177,4 +177,4 @@ update:
   notify: true
 
 # Config version, no touchy plz
-version: 1.4
+version: 1.5

@@ -11,9 +11,12 @@ import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.TFAAPI;
 import me.egg82.tfaplus.enums.Message;
 import me.egg82.tfaplus.extended.Configuration;
+import me.egg82.tfaplus.hooks.PlayerAnalyticsHook;
 import me.egg82.tfaplus.services.lookup.PlayerLookup;
 import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.MapUtil;
+import ninja.egg82.service.ServiceLocator;
+import ninja.egg82.service.ServiceNotFoundException;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -63,14 +66,12 @@ public class RegisterHOTPCommand implements Runnable {
 
                     try {
                         f.accept(api.registerHOTP(v, config.get().getNode("otp", "digits").getLong(), initialCounterValue));
+                        try {
+                            PlayerAnalyticsHook planHook = ServiceLocator.get(PlayerAnalyticsHook.class);
+                            planHook.update(v, playerName);
+                        } catch (InstantiationException | IllegalAccessException | ServiceNotFoundException ignored) { }
                     } catch (APIException ex) {
                         logger.error(ex.getMessage(), ex);
-                    }
-                })
-                .abortIfNull(new TaskChainAbortAction<Object, Object, Object>() {
-                    @Override
-                    public void onAbort(TaskChain<?> chain, Object arg1) {
-                        issuer.sendError(Message.ERROR__INTERNAL);
                     }
                 })
                 .syncLast(v -> {

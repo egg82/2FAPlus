@@ -28,6 +28,9 @@ public class ConfigurationVersionUtil {
         if (config.getNode("version").getDouble() == 1.3d) {
             to14(config);
         }
+        if (config.getNode("version").getDouble() == 1.4d) {
+            to15(config);
+        }
 
         if (config.getNode("version").getDouble() != oldVersion) {
             File backupFile = new File(fileOnDisk.getParent(), fileOnDisk.getName() + ".bak");
@@ -41,7 +44,7 @@ public class ConfigurationVersionUtil {
     }
 
     private static void to11(ConfigurationNode config) {
-        // Add 2FAPlus to commands
+        // Add 2FA+ to commands
         List<String> commands;
         try {
             commands = config.getNode("2fa", "command-list").getList(TypeToken.of(String.class));
@@ -89,5 +92,15 @@ public class ConfigurationVersionUtil {
 
         // Version
         config.getNode("version").setValue(1.4d);
+    }
+
+    private static void to15(ConfigurationNode config) {
+        // Change name
+        if (config.getNode("opt", "issuer").getString("").equalsIgnoreCase("2FAPlus")) {
+            config.getNode("otp", "issuer").setValue("2FA+");
+        }
+
+        // Version
+        config.getNode("version").setValue(1.5d);
     }
 }
