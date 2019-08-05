@@ -190,6 +190,8 @@ public class ConfigurationFileUtil {
                 .authy(getAuthy(config.getNode("authy", "key").getString(""), debug))
                 .build();
 
+        ConfigUtil.setConfiguration(config, cachedValues);
+
         ServiceLocator.register(config);
         ServiceLocator.register(cachedValues);
 
