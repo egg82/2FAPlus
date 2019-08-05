@@ -4,8 +4,12 @@ import java.sql.SQLException;
 import me.egg82.tfaplus.enums.SQLType;
 import ninja.egg82.core.SQLQueryResult;
 import ninja.egg82.sql.SQL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SQLVersionUtil {
+    private static final Logger logger = LoggerFactory.getLogger(SQLVersionUtil.class);
+
     private SQLVersionUtil() {}
 
     public static void conformVersion(SQLType type, SQL sql, String tablePrefix) throws SQLException {
@@ -14,11 +18,17 @@ public class SQLVersionUtil {
         if (currentVersion == 0.0d) {
             to10(type, sql, tablePrefix);
             currentVersion = 1.0d;
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info("Updated SQL to version " + currentVersion);
+            }
         }
-        /*if (currentVersion == 1.0d) {
-            to11(type, sql, tablePrefix);
-            currentVersion = 1.1d;
-        }*/
+        if (currentVersion == 1.0d) {
+            to20(type, sql, tablePrefix);
+            currentVersion = 2.0d;
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info("Updated SQL to version " + currentVersion);
+            }
+        }
     }
 
     private static void to10(SQLType type, SQL sql, String tablePrefix) throws SQLException {
@@ -130,7 +140,7 @@ public class SQLVersionUtil {
         setVersion(type, sql, tablePrefix, 1.0d);
     }
 
-    private static void to11(SQLType type, SQL sql, String tablePrefix) throws SQLException {
+    private static void to20(SQLType type, SQL sql, String tablePrefix) throws SQLException {
         // Create uuid tables
         switch (type) {
             case MySQL:
@@ -146,13 +156,22 @@ public class SQLVersionUtil {
                         + "`uuid` TEXT(36) NOT NULL,"
                         + "UNIQUE (`uuid`)"
                         + ");");
+
+
+                sql.execute("DROP TABLE IF EXISTS `" + tablePrefix + "login`;");
+                sql.execute("CREATE TABLE `" + tablePrefix + "login` ("
+                        + "`ip` TEXT(45) NOT NULL,"
+                        + "`uuid` TEXT(36) NOT NULL DEFAULT 0,"
+                        + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                        + "UNIQUE(`ip`, `uuid`)"
+                        + ");");
                 break;
             default:
                 throw new SQLException("SQL type not recognized.");
         }
 
         // Version
-        setVersion(type, sql, tablePrefix, 1.1d);
+        setVersion(type, sql, tablePrefix, 2.0d);
     }
 
     private static double getVersion(SQLType type, SQL sql, String tablePrefix) throws SQLException {
