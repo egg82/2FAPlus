@@ -13,7 +13,6 @@ import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
-import ninja.leaping.configurate.ConfigurationNode;
 
 public class SQLite {
     private SQLite() {}
@@ -384,6 +383,30 @@ public class SQLite {
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid);
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid);
         cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", uuid);
+    }
+
+    public static Optional<UUID> getUUID(long id) throws APIException, SQLException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get required configuration.");
+        }
+
+        String tablePrefix = cachedConfig.get().getTablePrefix();
+        UUID uuid = null;
+
+        try {
+            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid` FROM `" + tablePrefix + "uuid` WHERE `id`=?;", id);
+
+            // Iterate rows
+            for (Object[] o : query.getData()) {
+                // Grab all data and convert to more useful object types
+                uuid = UUID.fromString((String) o[0]);
+            }
+        } catch (ClassCastException | IllegalArgumentException ex) {
+            throw new APIException(true, ex);
+        }
+
+        return Optional.ofNullable(uuid);
     }
 
     public static long getCurrentTime() throws APIException, SQLException {

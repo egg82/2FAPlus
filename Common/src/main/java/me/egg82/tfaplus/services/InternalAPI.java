@@ -34,6 +34,7 @@ public class InternalAPI {
     private static final Logger logger = LoggerFactory.getLogger(InternalAPI.class);
 
     private static Cache<LoginCacheData, Boolean> loginCache = Caffeine.newBuilder().expireAfterAccess(1L,TimeUnit.MINUTES).expireAfterWrite(1L,TimeUnit.HOURS).build();
+    private static LoadingCache<Long, UUID> uuidCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.DAYS).build(k -> getUuid(k));
     private static Cache<UUID, Long> authyCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static Cache<UUID, TOTPCacheData> totpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static Cache<UUID, HOTPCacheData> hotpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
@@ -178,6 +179,38 @@ public class InternalAPI {
         }
 
         return result.get();
+    }
+
+    private static UUID getUuid(long id) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        if (ConfigUtil.getDebugOrFalse()) {
+            logger.info("Getting UUID for internal ID " + id);
+        }
+
+        Optional<UUID> sqlResult = Optional.empty();
+        try {
+            switch (cachedConfig.get().getSQLType()) {
+                case MySQL:
+                    sqlResult = MySQL.getUUID(id);
+                    break;
+                case SQLite:
+                    sqlResult = SQLite.getUUID(id);
+                    break;
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage(), ex);
+            throw new APIException(true, ex);
+        }
+
+        if (!sqlResult.isPresent()) {
+            throw new APIException(true, "Could not convert internal ID to UUID.");
+        }
+
+        return sqlResult.get();
     }
 
     public String registerHOTP(UUID uuid, long codeLength, long initialCounter) throws APIException {

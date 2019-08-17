@@ -141,9 +141,9 @@ public class SQLVersionUtil {
     }
 
     private static void to20(SQLType type, SQL sql, String tablePrefix) throws SQLException {
-        // Create uuid tables
         switch (type) {
             case MySQL:
+                // Create uuid table
                 sql.execute("CREATE TABLE IF NOT EXISTS `" + tablePrefix + "uuid` ("
                         + "`id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,"
                         + "`uuid` VARCHAR(36) NOT NULL,"
@@ -151,19 +151,22 @@ public class SQLVersionUtil {
                         + ");");
                 break;
             case SQLite:
+                // Create uuid table
                 sql.execute("CREATE TABLE `" + tablePrefix + "uuid` ("
                         + "`id` INTEGER NOT NULL PRIMARY KEY,"
                         + "`uuid` TEXT(36) NOT NULL,"
                         + "UNIQUE (`uuid`)"
                         + ");");
 
+                // Get existing login data
 
+                // Re-create login table
                 sql.execute("DROP TABLE IF EXISTS `" + tablePrefix + "login`;");
                 sql.execute("CREATE TABLE `" + tablePrefix + "login` ("
                         + "`ip` TEXT(45) NOT NULL,"
-                        + "`uuid` TEXT(36) NOT NULL DEFAULT 0,"
+                        + "`id` INTEGER NOT NULL,"
                         + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                        + "UNIQUE(`ip`, `uuid`)"
+                        + "UNIQUE(`ip`, `id`)"
                         + ");");
                 break;
             default:
