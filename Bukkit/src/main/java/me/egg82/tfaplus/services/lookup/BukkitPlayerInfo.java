@@ -70,6 +70,7 @@ public class BukkitPlayerInfo implements PlayerInfo {
         // Currently-online lookup
         Player player = Bukkit.getPlayer(uuid);
         if (player != null) {
+            nameCache.put(player.getName(), uuid);
             return player.getName();
         }
 
@@ -109,6 +110,7 @@ public class BukkitPlayerInfo implements PlayerInfo {
         // Currently-online lookup
         Player player = Bukkit.getPlayer(name);
         if (player != null) {
+            uuidCache.put(player.getUniqueId(), name);
             return player.getUniqueId();
         }
 
