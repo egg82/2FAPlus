@@ -135,6 +135,7 @@ public class ConfigurationFileUtil {
                 config.getNode("2fa", "freeze", "chat").getBoolean(true),
                 config.getNode("2fa", "freeze", "interact").getBoolean(true),
                 config.getNode("2fa", "freeze", "attack").getBoolean(true),
+                config.getNode("2fa", "freeze", "damage").getBoolean(true),
                 config.getNode("2fa", "freeze", "inventory").getBoolean(true),
                 config.getNode("2fa", "freeze", "drops").getBoolean(true),
                 config.getNode("2fa", "freeze", "blocks").getBoolean(true),

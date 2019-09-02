@@ -13,7 +13,7 @@ public class SQLVersionUtil {
     private SQLVersionUtil() {}
 
     public static void conformVersion(SQLType type, SQL sql, String tablePrefix) throws SQLException {
-        double currentVersion = getVersion(type, sql, tablePrefix);
+        /*double currentVersion = getVersion(type, sql, tablePrefix);
 
         if (currentVersion == 0.0d) {
             to10(type, sql, tablePrefix);
@@ -28,7 +28,7 @@ public class SQLVersionUtil {
             if (ConfigUtil.getDebugOrFalse()) {
                 logger.info("Updated SQL to version " + currentVersion);
             }
-        }
+        }*/
     }
 
     private static void to10(SQLType type, SQL sql, String tablePrefix) throws SQLException {

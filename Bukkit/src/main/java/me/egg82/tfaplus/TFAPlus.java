@@ -9,7 +9,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,13 +36,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryMoveItemEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
@@ -58,6 +51,7 @@ public class TFAPlus {
     private TaskChainFactory taskFactory;
     private PaperCommandManager commandManager;
 
+    private List<EventHolder> eventHolders = new ArrayList<>();
     private List<BukkitEventSubscriber<?>> events = new ArrayList<>();
 
     private Metrics metrics = null;
@@ -104,11 +98,16 @@ public class TFAPlus {
         loadHooks();
         loadMetrics();
 
+        int numEvents = events.size();
+        for (EventHolder eventHolder : eventHolders) {
+            numEvents += eventHolder.numEvents();
+        }
+
         consoleCommandIssuer.sendInfo(Message.GENERAL__ENABLED);
         consoleCommandIssuer.sendInfo(Message.GENERAL__LOAD,
                 "{version}", plugin.getDescription().getVersion(),
                 "{commands}", String.valueOf(commandManager.getRegisteredRootCommands().size()),
-                "{events}", String.valueOf(events.size())
+                "{events}", String.valueOf(numEvents)
         );
 
         workPool.submit(this::checkUpdate);
@@ -118,6 +117,10 @@ public class TFAPlus {
         taskFactory.shutdown(8, TimeUnit.SECONDS);
         commandManager.unregisterCommands();
 
+        for (EventHolder eventHolder : eventHolders) {
+            eventHolder.cancel();
+        }
+        eventHolders.clear();
         for (BukkitEventSubscriber<?> event : events) {
             event.cancel();
         }
@@ -210,28 +213,12 @@ public class TFAPlus {
     }
 
     private void loadEvents() {
-        events.add(BukkitEvents.subscribe(plugin, AsyncPlayerChatEvent.class, EventPriority.LOWEST).handler(e -> new AsyncPlayerChatFrozenHandler(plugin, commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, PlayerCommandPreprocessEvent.class, EventPriority.LOWEST).handler(e -> new PlayerCommandPreprocessFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, PlayerInteractEvent.class, EventPriority.LOWEST).handler(e -> new PlayerInteractFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, EntityDamageByEntityEvent.class, EventPriority.LOWEST).handler(e -> new EntityDamageByEntityFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, InventoryClickEvent.class, EventPriority.LOWEST).handler(e -> new InventoryClickFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, InventoryDragEvent.class, EventPriority.LOWEST).handler(e -> new InventoryDragFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, InventoryMoveItemEvent.class, EventPriority.LOWEST).handler(e -> new InventoryMoveItemFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, PlayerPickupItemEvent.class, EventPriority.LOWEST).handler(e -> new PlayerPickupItemFrozenHandler().accept(e)));
-        try {
-            Class.forName("org.bukkit.event.player.PlayerPickupArrowEvent");
-            events.add(BukkitEvents.subscribe(plugin, PlayerPickupArrowEvent.class, EventPriority.LOWEST).handler(e -> new PlayerPickupArrowFrozenHandler().accept(e)));
-        } catch (ClassNotFoundException ignored) {}
-        events.add(BukkitEvents.subscribe(plugin, PlayerDropItemEvent.class, EventPriority.LOWEST).handler(e -> new PlayerDropItemFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, BlockPlaceEvent.class, EventPriority.LOWEST).handler(e -> new BlockPlaceFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, BlockBreakEvent.class, EventPriority.LOWEST).handler(e -> new BlockBreakFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, PlayerMoveEvent.class, EventPriority.LOWEST).handler(e -> new PlayerMoveFrozenHandler(commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, PlayerTeleportEvent.class, EventPriority.LOWEST).handler(e -> new PlayerTeleportFrozenHandler(commandManager).accept(e)));
-
-        events.add(BukkitEvents.subscribe(plugin, AsyncPlayerPreLoginEvent.class, EventPriority.HIGH).handler(e -> new AsyncPlayerPreLoginCacheHandler().accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, PlayerLoginEvent.class, EventPriority.HIGHEST).handler(e -> new PlayerLoginCheckHandler(plugin, commandManager).accept(e)));
         events.add(BukkitEvents.subscribe(plugin, PlayerLoginEvent.class, EventPriority.LOW).handler(e -> new PlayerLoginUpdateNotifyHandler(plugin, commandManager).accept(e)));
-        events.add(BukkitEvents.subscribe(plugin, PlayerQuitEvent.class, EventPriority.HIGH).handler(e -> new PlayerQuitFrozenHandler().accept(e)));
+
+        eventHolders.add(new LoginEvents(plugin, commandManager));
+        eventHolders.add(new CommandEvents(plugin, commandManager));
+        eventHolders.add(new HOTPEvents(plugin, commandManager));
+        eventHolders.add(new FrozenEvents(plugin, commandManager));
     }
 
     private void loadHooks() {

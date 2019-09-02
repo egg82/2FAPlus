@@ -5,6 +5,7 @@ import com.google.common.reflect.TypeToken;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
@@ -30,6 +31,9 @@ public class ConfigurationVersionUtil {
         }
         if (config.getNode("version").getDouble() == 1.4d) {
             to15(config);
+        }
+        if (config.getNode("version").getDouble() == 1.5d) {
+            to16(config);
         }
 
         if (config.getNode("version").getDouble() != oldVersion) {
@@ -102,5 +106,26 @@ public class ConfigurationVersionUtil {
 
         // Version
         config.getNode("version").setValue(1.5d);
+    }
+
+    private static void to16(ConfigurationNode config) {
+        // 2fa->too-many-attempts-kick-message to 2fa->fail-kick-message
+        String failKickMessage = config.getNode("2fa", "too-many-attempts-kick-message").getString("");
+        config.getNode("2fa").removeChild("too-many-attempts-kick-message");
+        config.getNode("2fa", "fail-kick-message").setValue(failKickMessage);
+
+        // 2fa->too-many-attempts-command to 2fa->fail-commands
+        List<String> failCommands = Collections.singletonList(config.getNode("2fa", "too-many-attempts-command").getString(""));
+        config.getNode("2fa").removeChild("too-many-attempts-command");
+        config.getNode("2fa", "fail-commands").setValue(failCommands);
+
+        // Add 2fa->success-commands
+        config.getNode("2fa", "success-commands").setValue(Collections.emptyList());
+
+        // Add 2fa->freeze->damage
+        config.getNode("2fa", "freeze", "damage").setValue(Boolean.TRUE);
+
+        // Version
+        config.getNode("version").setValue(1.6d);
     }
 }

@@ -14,7 +14,7 @@ import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
 
-public class MySQL {
+public class MySQL implements DatabaseHandler {
     private MySQL() {}
 
     public static SQLFetchResult loadInfo() throws APIException, SQLException {

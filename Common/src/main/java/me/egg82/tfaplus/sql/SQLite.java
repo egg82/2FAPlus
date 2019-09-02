@@ -14,7 +14,7 @@ import me.egg82.tfaplus.utils.ConfigUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
 
-public class SQLite {
+public class SQLite implements DatabaseHandler {
     private SQLite() {}
 
     public static SQLFetchResult loadInfo() throws APIException, SQLException {

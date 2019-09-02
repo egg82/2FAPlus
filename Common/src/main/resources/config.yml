@@ -125,12 +125,20 @@ otp:
   max-attempts: 3
   # The kick message to display to players who have tried (and failed) to authenticate too many times
   # If left blank, will not kick the player
-  too-many-attempts-kick-message: '&cYou have attempted 2FA too many times!'
-  # The command that CONSOLE will run for players who have tried (and failed) to authenticate too many times
+  fail-kick-message: '&cYou have attempted 2FA too many times!'
+  # The command(s) that CONSOLE will run for players who have tried (and failed) to authenticate too many times
   # Use %player% as a placeholder for the player's (real) name
   # Use %uuid% as a placeholder for the player's uuid
   # If left blank, will not run anything
-  too-many-attempts-command: ''
+  fail-commands: []
+  #- '' # Add this command to be run
+  # The command(s) that CONSOLE will run for players who have successfully authenticated ON LOGIN ONLY
+  # Note: THIS DOES NOT RUN FOR PLAYERS WHO AUTHENTICATE WHEN RUNNING A PROTECTED COMMAND
+  # Use %player% as a placeholder for the player's (real) name
+  # Use %uuid% as a placeholder for the player's uuid
+  # If left blank, will not run anything
+  success-commands: []
+  #- '' # Add this command to be run
   # How players are frozen while they are waiting for authentication
   freeze:
     # Stop non-authenticated players from running commands
@@ -141,6 +149,8 @@ otp:
     interact: true
     # Stop non-authenticated players from hitting other players/entities
     attack: true
+    # Prevent damage to non-authenticated players (immunity)
+    damage: true
     # Stop non-authenticated players from moving stuff around in inventories
     inventory: true
     # Stop non-authenticated players from dropping/picking up items
@@ -177,4 +187,4 @@ update:
   notify: true
 
 # Config version, no touchy plz
-version: 1.5
+version: 1.6
