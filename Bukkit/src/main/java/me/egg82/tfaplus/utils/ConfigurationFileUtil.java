@@ -17,6 +17,9 @@ import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
 import me.egg82.tfaplus.extended.RabbitMQReceiver;
+import me.egg82.tfaplus.sql.DatabaseHandler;
+import me.egg82.tfaplus.sql.MySQL;
+import me.egg82.tfaplus.sql.SQLite;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.sql.SQL;
 import ninja.leaping.configurate.ConfigurationNode;
@@ -184,9 +187,7 @@ public class ConfigurationFileUtil {
                 .ignored(ignored)
                 .redisPool(getRedisPool(config.getNode("redis")))
                 .rabbitConnectionFactory(getRabbitConnectionFactory(config.getNode("rabbitmq")))
-                .sql(getSQL(plugin, config.getNode("storage")))
-                .sqlType(config.getNode("storage", "method").getString("sqlite"))
-                .tablePrefix(getTablePrefix(config.getNode("storage")))
+                .database(getDatabase(plugin, config.getNode("storage"), getTablePrefix(config.getNode("storage"))))
                 .serverName(ServerNameUtil.getName(new File(plugin.getDataFolder(), "server-name.txt")))
                 .authy(getAuthy(config.getNode("authy", "key").getString(""), debug))
                 .build();
@@ -199,7 +200,7 @@ public class ConfigurationFileUtil {
         if (debug) {
             logger.info(LogUtil.getHeading() + ChatColor.YELLOW + "Using Redis: " + ChatColor.WHITE + (cachedValues.getRedisPool() != null));
             logger.info(LogUtil.getHeading() + ChatColor.YELLOW + "Using RabbitMQ: " + ChatColor.WHITE + (cachedValues.getRabbitConnectionFactory() != null));
-            logger.info(LogUtil.getHeading() + ChatColor.YELLOW + "SQL type: " + ChatColor.WHITE + cachedValues.getSQLType().name());
+            logger.info(LogUtil.getHeading() + ChatColor.YELLOW + "SQL type: " + ChatColor.WHITE + cachedValues.getDatabase().getType().name());
         }
     }
 
@@ -242,7 +243,7 @@ public class ConfigurationFileUtil {
             return;
         }
 
-        cachedConfigValues.get().getSQL().close();
+        cachedConfigValues.get().getDatabase().close();
 
         if (cachedConfigValues.get().getRedisPool() != null) {
             cachedConfigValues.get().getRedisPool().close();
@@ -261,7 +262,7 @@ public class ConfigurationFileUtil {
         return Optional.of(new AuthyApiClient(key, "https://api.authy.com/", debug));
     }
 
-    private static SQL getSQL(Plugin plugin, ConfigurationNode storageConfigNode) {
+    private static DatabaseHandler getDatabase(Plugin plugin, ConfigurationNode storageConfigNode, String tablePrefix) {
         SQLType type = SQLType.getByName(storageConfigNode.getNode("method").getString("sqlite"));
         if (type == null) {
             logger.warn("storage.method is an unknown value. Using default value.");
@@ -311,7 +312,16 @@ public class ConfigurationFileUtil {
             hikariConfig.addDataSourceProperty("elideSetAutoCommits", "true");
         }
 
-        return new SQL(hikariConfig);
+        SQL sql = new SQL(hikariConfig);
+
+        switch (type) {
+            case MySQL:
+                return new MySQL(sql, type, tablePrefix);
+            case SQLite:
+                return new SQLite(sql, type, tablePrefix);
+            default:
+                throw new IllegalStateException("SQL type given with no corresponding concrete: " + type);
+        }
     }
 
     private static String getTablePrefix(ConfigurationNode storageConfigNode) {

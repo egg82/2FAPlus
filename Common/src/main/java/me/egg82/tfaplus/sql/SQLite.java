@@ -9,21 +9,33 @@ import java.util.UUID;
 import javax.crypto.SecretKey;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.core.*;
-import me.egg82.tfaplus.extended.CachedConfigValues;
-import me.egg82.tfaplus.utils.ConfigUtil;
+import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
+import ninja.egg82.sql.SQL;
 
 public class SQLite implements DatabaseHandler {
-    private SQLite() {}
+    private final SQL sql;
+    private final SQLType type;
+    private final String tablePrefix;
 
-    public static SQLFetchResult loadInfo() throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
+    public SQLite(SQL sql, SQLType type, String tablePrefix) {
+        this.sql = sql;
+        this.type = type;
+        this.tablePrefix = tablePrefix;
+    }
 
-        String tablePrefix = cachedConfig.get().getTablePrefix();
+    public void close() { sql.close(); }
+
+    public boolean isLocal() { return true; }
+
+    public SQL getSQL() { return sql; }
+
+    public SQLType getType() { return type; }
+
+    public String getTablePrefix() { return tablePrefix; }
+
+    public SQLFetchResult loadInfo() throws APIException, SQLException {
         List<LoginData> loginData = new ArrayList<>();
         List<AuthyData> authyData = new ArrayList<>();
         List<TOTPData> totpData = new ArrayList<>();
@@ -31,7 +43,7 @@ public class SQLite implements DatabaseHandler {
         List<String> removedKeys = new ArrayList<>();
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid`, `ip`, `created` FROM `" + tablePrefix + "login`;");
+            SQLQueryResult query = sql.query("SELECT `uuid`, `ip`, `created` FROM `" + tablePrefix + "login`;");
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -42,13 +54,13 @@ public class SQLite implements DatabaseHandler {
                     removedKeys.add("2faplus:authy:" + o[0]);
                     removedKeys.add("2faplus:uuid:" + o[0]);
                     removedKeys.add("2faplus:login:" + o[0] + "|" + o[1]);
-                    cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", o[0]);
+                    sql.execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", o[0]);
                     continue;
                 }
                 if (!ValidationUtil.isValidIp((String) o[1])) {
                     removedKeys.add("2faplus:ip:" + o[1]);
                     removedKeys.add("2faplus:login:" + o[0] + "|" + o[1]);
-                    cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "login` WHERE `ip`=?;", o[1]);
+                    sql.execute("DELETE FROM `" + tablePrefix + "login` WHERE `ip`=?;", o[1]);
                     continue;
                 }
 
@@ -64,7 +76,7 @@ public class SQLite implements DatabaseHandler {
         }
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid`, `id` FROM `" + tablePrefix + "authy`;");
+            SQLQueryResult query = sql.query("SELECT `uuid`, `id` FROM `" + tablePrefix + "authy`;");
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -74,7 +86,7 @@ public class SQLite implements DatabaseHandler {
                     removedKeys.add("2faplus:authy:" + o[0]);
                     removedKeys.add("2faplus:totp:" + o[0]);
                     removedKeys.add("2faplus:hotp:" + o[0]);
-                    cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", o[0]);
+                    sql.execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", o[0]);
                     continue;
                 }
 
@@ -89,7 +101,7 @@ public class SQLite implements DatabaseHandler {
         }
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid`, `length`, `key` FROM `" + tablePrefix + "totp`;");
+            SQLQueryResult query = sql.query("SELECT `uuid`, `length`, `key` FROM `" + tablePrefix + "totp`;");
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -99,7 +111,7 @@ public class SQLite implements DatabaseHandler {
                     removedKeys.add("2faplus:authy:" + o[0]);
                     removedKeys.add("2faplus:totp:" + o[0]);
                     removedKeys.add("2faplus:hotp:" + o[0]);
-                    cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", o[0]);
+                    sql.execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", o[0]);
                     continue;
                 }
 
@@ -115,7 +127,7 @@ public class SQLite implements DatabaseHandler {
         }
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid`, `length`, `counter`, `key` FROM `" + tablePrefix + "hotp`;");
+            SQLQueryResult query = sql.query("SELECT `uuid`, `length`, `counter`, `key` FROM `" + tablePrefix + "hotp`;");
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -125,7 +137,7 @@ public class SQLite implements DatabaseHandler {
                     removedKeys.add("2faplus:authy:" + o[0]);
                     removedKeys.add("2faplus:totp:" + o[0]);
                     removedKeys.add("2faplus:hotp:" + o[0]);
-                    cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", o[0]);
+                    sql.execute("DELETE FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", o[0]);
                     continue;
                 }
 
@@ -150,17 +162,13 @@ public class SQLite implements DatabaseHandler {
         );
     }
 
-    public static Optional<LoginData> getLoginData(UUID uuid, String ip) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
+    public SQLFetchResult fetchQueue() { return new SQLFetchResult(new LoginData[0], new AuthyData[0], new TOTPData[0], new HOTPData[0], new String[0]); }
 
-        String tablePrefix = cachedConfig.get().getTablePrefix();
+    public Optional<LoginData> getLoginData(UUID uuid, String ip) throws APIException, SQLException {
         LoginData data = null;
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `created` FROM `" + tablePrefix + "login` WHERE `uuid`=? AND `ip`=?;", uuid.toString(), ip);
+            SQLQueryResult query = sql.query("SELECT `created` FROM `" + tablePrefix + "login` WHERE `uuid`=? AND `ip`=?;", uuid.toString(), ip);
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -175,17 +183,11 @@ public class SQLite implements DatabaseHandler {
         return Optional.ofNullable(data);
     }
 
-    public static Optional<AuthyData> getAuthyData(UUID uuid) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
+    public Optional<AuthyData> getAuthyData(UUID uuid) throws APIException, SQLException {
         AuthyData data = null;
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `id` FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid.toString());
+            SQLQueryResult query = sql.query("SELECT `id` FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid.toString());
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -200,17 +202,11 @@ public class SQLite implements DatabaseHandler {
         return Optional.ofNullable(data);
     }
 
-    public static Optional<TOTPData> getTOTPData(UUID uuid) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
+    public Optional<TOTPData> getTOTPData(UUID uuid) throws APIException, SQLException {
         TOTPData data = null;
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `length`, `key` FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid.toString());
+            SQLQueryResult query = sql.query("SELECT `length`, `key` FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid.toString());
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -226,17 +222,11 @@ public class SQLite implements DatabaseHandler {
         return Optional.ofNullable(data);
     }
 
-    public static Optional<HOTPData> getHOTPData(UUID uuid) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
+    public Optional<HOTPData> getHOTPData(UUID uuid) throws APIException, SQLException {
         HOTPData data = null;
 
         try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `length`, `counter`, `key` FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", uuid.toString());
+            SQLQueryResult query = sql.query("SELECT `length`, `counter`, `key` FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", uuid.toString());
 
             // Iterate rows
             for (Object[] o : query.getData()) {
@@ -253,18 +243,14 @@ public class SQLite implements DatabaseHandler {
         return Optional.ofNullable(data);
     }
 
-    public static LoginData updateLogin(UUID uuid, String ip) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
+    public LoginData updateLogin(LoginData data) throws APIException, SQLException { return updateLogin(data.getUUID(), data.getIP()); }
 
-        String tablePrefix = cachedConfig.get().getTablePrefix();
+    public LoginData updateLogin(UUID uuid, String ip) throws APIException, SQLException {
         LoginData result = null;
 
         try {
-            cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "login` (`uuid`, `ip`, `created`) VALUES (?, ?, (SELECT `created` FROM `" + tablePrefix + "login` WHERE `uuid`=? AND `ip`=?));", uuid.toString(), ip, uuid.toString(), ip);
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `created` FROM `" + tablePrefix + "login` WHERE `uuid`=? AND `ip`=?;", uuid.toString(), ip);
+            sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "login` (`uuid`, `ip`, `created`) VALUES (?, ?, (SELECT `created` FROM `" + tablePrefix + "login` WHERE `uuid`=? AND `ip`=?));", uuid.toString(), ip, uuid.toString(), ip);
+            SQLQueryResult query = sql.query("SELECT `created` FROM `" + tablePrefix + "login` WHERE `uuid`=? AND `ip`=?;", uuid.toString(), ip);
 
             for (Object[] o : query.getData()) {
                 long created = getTime(o[0]).getTime();
@@ -277,147 +263,40 @@ public class SQLite implements DatabaseHandler {
         return result;
     }
 
-    public static AuthyData updateAuthy(UUID uuid, long id) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
+    public AuthyData updateAuthy(AuthyData data) throws SQLException { return updateAuthy(data.getUUID(), data.getID()); }
 
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "authy` (`uuid`, `id`) VALUES(?, ?);", uuid.toString(), id);
+    public AuthyData updateAuthy(UUID uuid, long id) throws SQLException {
+        sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "authy` (`uuid`, `id`) VALUES(?, ?);", uuid.toString(), id);
         return new AuthyData(uuid, id);
     }
 
-    public static TOTPData updateTOTP(UUID uuid, long length, SecretKey key) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
+    public TOTPData updateTOTP(TOTPData data) throws SQLException { return updateTOTP(data.getUUID(), data.getLength(), data.getKey()); }
 
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES(?, ?, ?);", uuid.toString(), length, key.getEncoded());
+    public TOTPData updateTOTP(UUID uuid, long length, SecretKey key) throws SQLException {
+        sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES(?, ?, ?);", uuid.toString(), length, key.getEncoded());
         return new TOTPData(uuid, length, key);
     }
 
-    public static HOTPData updateHOTP(UUID uuid, long length, long counter, SecretKey key) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
+    public HOTPData updateHOTP(HOTPData data) throws SQLException { return updateHOTP(data.getUUID(), data.getLength(), data.getCounter(), data.getKey()); }
 
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "hotp` (`uuid`, `length`, `counter`, `key`) VALUES(?, ?, ?, ?);", uuid.toString(), length, counter, key.getEncoded());
+    public HOTPData updateHOTP(UUID uuid, long length, long counter, SecretKey key) throws SQLException {
+        sql.execute("INSERT OR REPLACE INTO `" + tablePrefix + "hotp` (`uuid`, `length`, `counter`, `key`) VALUES(?, ?, ?, ?);", uuid.toString(), length, counter, key.getEncoded());
         return new HOTPData(uuid, length, counter, key);
     }
 
-    public static void addLogin(LoginData data) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
+    public void delete(UUID uuid) throws SQLException { delete(uuid.toString()); }
 
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "login` (`uuid`, `ip`, `created`) VALUES (?, ?, ?);", data.getUUID().toString(), data.getIP(), data.getCreated());
+    public void delete(String uuid) throws SQLException {
+        sql.execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid);
+        sql.execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid);
+        sql.execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid);
+        sql.execute("DELETE FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", uuid);
     }
 
-    public static void addAuthy(AuthyData data) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "authy` (`uuid`, `id`) VALUES (?, ?);", data.getUUID().toString(), data.getID());
-    }
-
-    public static void addTOTP(TOTPData data) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "totp` (`uuid`, `length`, `key`) VALUES (?, ?, ?);", data.getUUID().toString(), data.getLength(), data.getKey().getEncoded());
-    }
-
-    public static void addHOTP(HOTPData data) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("INSERT OR REPLACE INTO `" + tablePrefix + "hotp` (`uuid`, `length`, `counter`, `key`) VALUES (?, ?, ?, ?);", data.getUUID().toString(), data.getLength(), data.getCounter(), data.getKey().getEncoded());
-    }
-
-    public static void delete(UUID uuid) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid.toString());
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid.toString());
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid.toString());
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", uuid.toString());
-    }
-
-    public static void delete(String uuid) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "login` WHERE `uuid`=?;", uuid);
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "authy` WHERE `uuid`=?;", uuid);
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "totp` WHERE `uuid`=?;", uuid);
-        cachedConfig.get().getSQL().execute("DELETE FROM `" + tablePrefix + "hotp` WHERE `uuid`=?;", uuid);
-    }
-
-    public static Optional<UUID> getUUID(long id) throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
-        String tablePrefix = cachedConfig.get().getTablePrefix();
-        UUID uuid = null;
-
-        try {
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT `uuid` FROM `" + tablePrefix + "uuid` WHERE `id`=?;", id);
-
-            // Iterate rows
-            for (Object[] o : query.getData()) {
-                // Grab all data and convert to more useful object types
-                uuid = UUID.fromString((String) o[0]);
-            }
-        } catch (ClassCastException | IllegalArgumentException ex) {
-            throw new APIException(true, ex);
-        }
-
-        return Optional.ofNullable(uuid);
-    }
-
-    public static long getCurrentTime() throws APIException, SQLException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get required configuration.");
-        }
-
+    public long getCurrentTime() throws APIException, SQLException {
         try {
             long start = System.currentTimeMillis();
-            SQLQueryResult query = cachedConfig.get().getSQL().query("SELECT CURRENT_TIMESTAMP;");
+            SQLQueryResult query = sql.query("SELECT CURRENT_TIMESTAMP;");
 
             for (Object[] o : query.getData()) {
                 return getTime(o[0]).getTime() + (System.currentTimeMillis() - start);

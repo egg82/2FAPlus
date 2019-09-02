@@ -193,7 +193,7 @@ public class RabbitMQReceiver {
 
                     // In this case, the message is the "UUID"
                     try {
-                        InternalAPI.delete(UUID.fromString(message));
+                        InternalAPI.deleteFromMessaging(UUID.fromString(message));
                     } catch (APIException ex) {
                         logger.error(ex.getMessage(), ex);
                     }

@@ -13,7 +13,7 @@ public class SQLVersionUtil {
     private SQLVersionUtil() {}
 
     public static void conformVersion(SQLType type, SQL sql, String tablePrefix) throws SQLException {
-        /*double currentVersion = getVersion(type, sql, tablePrefix);
+        double currentVersion = getVersion(type, sql, tablePrefix);
 
         if (currentVersion == 0.0d) {
             to10(type, sql, tablePrefix);
@@ -22,7 +22,7 @@ public class SQLVersionUtil {
                 logger.info("Updated SQL to version " + currentVersion);
             }
         }
-        if (currentVersion == 1.0d) {
+        /*if (currentVersion == 1.0d) {
             to20(type, sql, tablePrefix);
             currentVersion = 2.0d;
             if (ConfigUtil.getDebugOrFalse()) {
@@ -138,43 +138,6 @@ public class SQLVersionUtil {
 
         // Version
         setVersion(type, sql, tablePrefix, 1.0d);
-    }
-
-    private static void to20(SQLType type, SQL sql, String tablePrefix) throws SQLException {
-        switch (type) {
-            case MySQL:
-                // Create uuid table
-                sql.execute("CREATE TABLE IF NOT EXISTS `" + tablePrefix + "uuid` ("
-                        + "`id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,"
-                        + "`uuid` VARCHAR(36) NOT NULL,"
-                        + "UNIQUE(`uuid`)"
-                        + ");");
-                break;
-            case SQLite:
-                // Create uuid table
-                sql.execute("CREATE TABLE `" + tablePrefix + "uuid` ("
-                        + "`id` INTEGER NOT NULL PRIMARY KEY,"
-                        + "`uuid` TEXT(36) NOT NULL,"
-                        + "UNIQUE (`uuid`)"
-                        + ");");
-
-                // Get existing login data
-
-                // Re-create login table
-                sql.execute("DROP TABLE IF EXISTS `" + tablePrefix + "login`;");
-                sql.execute("CREATE TABLE `" + tablePrefix + "login` ("
-                        + "`ip` TEXT(45) NOT NULL,"
-                        + "`id` INTEGER NOT NULL,"
-                        + "`created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                        + "UNIQUE(`ip`, `id`)"
-                        + ");");
-                break;
-            default:
-                throw new SQLException("SQL type not recognized.");
-        }
-
-        // Version
-        setVersion(type, sql, tablePrefix, 2.0d);
     }
 
     private static double getVersion(SQLType type, SQL sql, String tablePrefix) throws SQLException {

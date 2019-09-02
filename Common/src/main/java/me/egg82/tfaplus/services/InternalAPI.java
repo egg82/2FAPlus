@@ -20,11 +20,8 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.core.*;
-import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.ServiceKeys;
-import me.egg82.tfaplus.sql.MySQL;
-import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.ConfigUtil;
 import org.apache.commons.codec.binary.Base32;
 import org.slf4j.Logger;
@@ -34,7 +31,6 @@ public class InternalAPI {
     private static final Logger logger = LoggerFactory.getLogger(InternalAPI.class);
 
     private static Cache<LoginCacheData, Boolean> loginCache = Caffeine.newBuilder().expireAfterAccess(1L,TimeUnit.MINUTES).expireAfterWrite(1L,TimeUnit.HOURS).build();
-    private static LoadingCache<Long, UUID> uuidCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.DAYS).build(k -> getUuid(k));
     private static Cache<UUID, Long> authyCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static Cache<UUID, TOTPCacheData> totpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
     private static Cache<UUID, HOTPCacheData> hotpCache = Caffeine.newBuilder().expireAfterAccess(1L, TimeUnit.HOURS).build();
@@ -59,9 +55,9 @@ public class InternalAPI {
         }
 
         loginCache.put(new LoginCacheData(data.getUUID(), data.getIP()), Boolean.TRUE);
-        if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+        if (cachedConfig.get().getDatabase().isLocal()) {
             try {
-                SQLite.addLogin(data);
+                cachedConfig.get().getDatabase().updateLogin(data);
             } catch (SQLException ex) {
                 throw new APIException(true, ex);
             }
@@ -75,9 +71,9 @@ public class InternalAPI {
         }
 
         authyCache.put(data.getUUID(), data.getID());
-        if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+        if (cachedConfig.get().getDatabase().isLocal()) {
             try {
-                SQLite.addAuthy(data);
+                cachedConfig.get().getDatabase().updateAuthy(data);
             } catch (SQLException ex) {
                 throw new APIException(true, ex);
             }
@@ -91,9 +87,9 @@ public class InternalAPI {
         }
 
         totpCache.put(data.getUUID(), new TOTPCacheData(data.getLength(), data.getKey()));
-        if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+        if (cachedConfig.get().getDatabase().isLocal()) {
             try {
-                SQLite.addTOTP(data);
+                cachedConfig.get().getDatabase().updateTOTP(data);
             } catch (SQLException ex) {
                 throw new APIException(true, ex);
             }
@@ -107,9 +103,9 @@ public class InternalAPI {
         }
 
         hotpCache.put(data.getUUID(), new HOTPCacheData(data.getLength(), data.getCounter(), data.getKey()));
-        if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+        if (cachedConfig.get().getDatabase().isLocal()) {
             try {
-                SQLite.addHOTP(data);
+                cachedConfig.get().getDatabase().updateHOTP(data);
             } catch (SQLException ex) {
                 throw new APIException(true, ex);
             }
@@ -127,16 +123,9 @@ public class InternalAPI {
         }
 
         // Update SQL
-        LoginData sqlResult = null;
+        LoginData sqlResult;
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    sqlResult = MySQL.updateLogin(uuid, ip);
-                    break;
-                case SQLite:
-                    sqlResult = SQLite.updateLogin(uuid, ip);
-                    break;
-            }
+            sqlResult = cachedConfig.get().getDatabase().updateLogin(uuid, ip);
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -181,38 +170,6 @@ public class InternalAPI {
         return result.get();
     }
 
-    private static UUID getUuid(long id) throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
-
-        if (ConfigUtil.getDebugOrFalse()) {
-            logger.info("Getting UUID for internal ID " + id);
-        }
-
-        Optional<UUID> sqlResult = Optional.empty();
-        try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    sqlResult = MySQL.getUUID(id);
-                    break;
-                case SQLite:
-                    sqlResult = SQLite.getUUID(id);
-                    break;
-            }
-        } catch (SQLException ex) {
-            logger.error(ex.getMessage(), ex);
-            throw new APIException(true, ex);
-        }
-
-        if (!sqlResult.isPresent()) {
-            throw new APIException(true, "Could not convert internal ID to UUID.");
-        }
-
-        return sqlResult.get();
-    }
-
     public String registerHOTP(UUID uuid, long codeLength, long initialCounter) throws APIException {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
@@ -237,16 +194,9 @@ public class InternalAPI {
         SecretKey key = keyGen.generateKey();
 
         // Update SQL
-        HOTPData sqlResult = null;
+        HOTPData sqlResult;
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    sqlResult = MySQL.updateHOTP(uuid, codeLength, initialCounter, key);
-                    break;
-                case SQLite:
-                    sqlResult = SQLite.updateHOTP(uuid, codeLength, initialCounter, key);
-                    break;
-            }
+            sqlResult = cachedConfig.get().getDatabase().updateHOTP(uuid, codeLength, initialCounter, key);
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -290,16 +240,9 @@ public class InternalAPI {
         SecretKey key = keyGen.generateKey();
 
         // Update SQL
-        TOTPData sqlResult = null;
+        TOTPData sqlResult;
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    sqlResult = MySQL.updateTOTP(uuid, codeLength, key);
-                    break;
-                case SQLite:
-                    sqlResult = SQLite.updateTOTP(uuid, codeLength, key);
-                    break;
-            }
+            sqlResult = cachedConfig.get().getDatabase().updateTOTP(uuid, codeLength, key);
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -343,16 +286,9 @@ public class InternalAPI {
         }
 
         // Update SQL
-        AuthyData sqlResult = null;
+        AuthyData sqlResult;
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    sqlResult = MySQL.updateAuthy(uuid, user.getId());
-                    break;
-                case SQLite:
-                    sqlResult = SQLite.updateAuthy(uuid, user.getId());
-                    break;
-            }
+            sqlResult = cachedConfig.get().getDatabase().updateAuthy(uuid, user.getId());
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -382,16 +318,9 @@ public class InternalAPI {
 
         // Delete authy
         if (cachedConfig.get().getAuthy().isPresent()) {
-            Optional<AuthyData> sqlResult = Optional.empty();
+            Optional<AuthyData> sqlResult;
             try {
-                switch (cachedConfig.get().getSQLType()) {
-                    case MySQL:
-                        sqlResult = MySQL.getAuthyData(uuid);
-                        break;
-                    case SQLite:
-                        sqlResult = SQLite.getAuthyData(uuid);
-                        break;
-                }
+                sqlResult = cachedConfig.get().getDatabase().getAuthyData(uuid);
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
                 throw new APIException(true, ex);
@@ -415,14 +344,7 @@ public class InternalAPI {
 
         // Delete SQL
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    MySQL.delete(uuid);
-                    break;
-                case SQLite:
-                    SQLite.delete(uuid);
-                    break;
-            }
+            cachedConfig.get().getDatabase().delete(uuid);
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -451,9 +373,9 @@ public class InternalAPI {
         }
 
         // Delete SQL
-        if (cachedConfig.get().getSQLType() == SQLType.SQLite) {
+        if (cachedConfig.get().getDatabase().isLocal()) {
             try {
-                SQLite.delete(uuid);
+                cachedConfig.get().getDatabase().delete(uuid);
             } catch (SQLException ex) {
                 logger.error(ex.getMessage(), ex);
                 throw new APIException(true, ex);
@@ -734,16 +656,9 @@ public class InternalAPI {
         }
 
         // Update SQL
-        HOTPData sqlResult = null;
+        HOTPData sqlResult;
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    sqlResult = MySQL.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
-                    break;
-                case SQLite:
-                    sqlResult = SQLite.updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
-                    break;
-            }
+            sqlResult = cachedConfig.get().getDatabase().updateHOTP(uuid, data.get().getLength(), counter, data.get().getKey());
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -772,16 +687,9 @@ public class InternalAPI {
         }
 
         // Update SQL
-        HOTPData sqlResult = null;
+        HOTPData sqlResult;
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    sqlResult = MySQL.updateHOTP(uuid, length, counter, key);
-                    break;
-                case SQLite:
-                    sqlResult = SQLite.updateHOTP(uuid, length, counter, key);
-                    break;
-            }
+            sqlResult = cachedConfig.get().getDatabase().updateHOTP(uuid, length, counter, key);
         } catch (SQLException ex) {
             logger.error(ex.getMessage(), ex);
             throw new APIException(true, ex);
@@ -932,16 +840,7 @@ public class InternalAPI {
 
         // SQL
         try {
-            Optional<LoginData> result = Optional.empty();
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    result = MySQL.getLoginData(uuid, ip);
-                    break;
-                case SQLite:
-                    result = SQLite.getLoginData(uuid, ip);
-                    break;
-            }
-
+            Optional<LoginData> result = cachedConfig.get().getDatabase().getLoginData(uuid, ip);
             if (result.isPresent()) {
                 if (ConfigUtil.getDebugOrFalse()) {
                     logger.info(uuid + " (" + ip + ") login found in storage. Value: " + result.get());
@@ -980,16 +879,7 @@ public class InternalAPI {
 
         // SQL
         try {
-            Optional<TOTPData> result = Optional.empty();
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    result = MySQL.getTOTPData(uuid);
-                    break;
-                case SQLite:
-                    result = SQLite.getTOTPData(uuid);
-                    break;
-            }
-
+            Optional<TOTPData> result = cachedConfig.get().getDatabase().getTOTPData(uuid);
             if (result.isPresent()) {
                 if (ConfigUtil.getDebugOrFalse()) {
                     logger.info(uuid + " TOTP found in storage. Value: " + result.get());
@@ -1028,16 +918,7 @@ public class InternalAPI {
 
         // SQL
         try {
-            Optional<HOTPData> result = Optional.empty();
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    result = MySQL.getHOTPData(uuid);
-                    break;
-                case SQLite:
-                    result = SQLite.getHOTPData(uuid);
-                    break;
-            }
-
+            Optional<HOTPData> result = cachedConfig.get().getDatabase().getHOTPData(uuid);
             if (result.isPresent()) {
                 if (ConfigUtil.getDebugOrFalse()) {
                     logger.info(uuid + " HOTP found in storage. Value: " + result.get());
@@ -1076,16 +957,7 @@ public class InternalAPI {
 
         // SQL
         try {
-            Optional<AuthyData> result = Optional.empty();
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    result = MySQL.getAuthyData(uuid);
-                    break;
-                case SQLite:
-                    result = SQLite.getAuthyData(uuid);
-                    break;
-            }
-
+            Optional<AuthyData> result = cachedConfig.get().getDatabase().getAuthyData(uuid);
             if (result.isPresent()) {
                 if (ConfigUtil.getDebugOrFalse()) {
                     logger.info(uuid + " Authy found in storage. Value: " + result.get());

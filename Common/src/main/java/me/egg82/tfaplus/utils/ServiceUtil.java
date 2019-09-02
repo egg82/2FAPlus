@@ -9,13 +9,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import me.egg82.tfaplus.APIException;
-import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.RabbitMQReceiver;
 import me.egg82.tfaplus.extended.RedisSubscriber;
 import me.egg82.tfaplus.services.Redis;
-import me.egg82.tfaplus.sql.MySQL;
-import me.egg82.tfaplus.sql.SQLite;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import org.slf4j.Logger;
@@ -64,16 +61,8 @@ public class ServiceUtil {
         }
 
         try {
-            SQLVersionUtil.conformVersion(cachedConfig.get().getSQLType(), cachedConfig.get().getSQL(), cachedConfig.get().getTablePrefix());
-
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    Redis.updateFromQueue(MySQL.loadInfo());
-                    break;
-                case SQLite:
-                    Redis.updateFromQueue(SQLite.loadInfo());
-                    break;
-            }
+            SQLVersionUtil.conformVersion(cachedConfig.get().getDatabase().getType(), cachedConfig.get().getDatabase().getSQL(), cachedConfig.get().getDatabase().getTablePrefix());
+            Redis.updateFromQueue(cachedConfig.get().getDatabase().loadInfo());
         } catch (APIException | SQLException ex) {
             logger.error(ex.getMessage(), ex);
             return;
@@ -95,9 +84,7 @@ public class ServiceUtil {
         }
 
         try {
-            if (cachedConfig.get().getSQLType() == SQLType.MySQL) {
-                Redis.updateFromQueue(MySQL.fetchQueue());
-            }
+            Redis.updateFromQueue(cachedConfig.get().getDatabase().fetchQueue());
         } catch (APIException | SQLException ex) {
             if (!ex.getMessage().endsWith("has been closed.")) {
                 logger.error(ex.getMessage(), ex);
@@ -114,7 +101,7 @@ public class ServiceUtil {
             return;
         }
 
-        cachedConfig.get().getSQL().close();
+        cachedConfig.get().getDatabase().close();
     }
 
     public static void registerWorkPool() { workPool = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setNameFormat("2FAPlus-Service-%d").build()); }

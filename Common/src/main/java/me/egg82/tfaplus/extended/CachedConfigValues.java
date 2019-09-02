@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import me.egg82.tfaplus.core.FreezeConfigContainer;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.services.InternalAPI;
+import me.egg82.tfaplus.sql.DatabaseHandler;
 import ninja.egg82.sql.SQL;
 import ninja.egg82.tuples.longs.LongObjectPair;
 import redis.clients.jedis.JedisPool;
@@ -46,14 +47,8 @@ public class CachedConfigValues {
     private ConnectionFactory rabbitConnectionFactory = null;
     public ConnectionFactory getRabbitConnectionFactory() { return rabbitConnectionFactory; }
 
-    private SQL sql = null;
-    public SQL getSQL() { return sql; }
-
-    private SQLType sqlType = SQLType.SQLite;
-    public SQLType getSQLType() { return sqlType; }
-
-    private String tablePrefix = null;
-    public String getTablePrefix() { return tablePrefix; }
+    private DatabaseHandler database = null;
+    public DatabaseHandler getDatabase() { return database; }
 
     private String serverName = null;
     public String getServerName() { return serverName; }
@@ -135,27 +130,11 @@ public class CachedConfigValues {
             return this;
         }
 
-        public CachedConfigValues.Builder sql(SQL value) {
+        public CachedConfigValues.Builder database(DatabaseHandler value) {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
-            values.sql = value;
-            return this;
-        }
-
-        public CachedConfigValues.Builder sqlType(String value) {
-            if (value == null) {
-                throw new IllegalArgumentException("value cannot be null.");
-            }
-            values.sqlType = SQLType.getByName(value);
-            return this;
-        }
-
-        public CachedConfigValues.Builder tablePrefix(String value) {
-            if (value == null) {
-                throw new IllegalArgumentException("value cannot be null.");
-            }
-            values.tablePrefix = value;
+            values.database = value;
             return this;
         }
 

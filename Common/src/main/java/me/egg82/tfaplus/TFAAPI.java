@@ -26,12 +26,7 @@ public class TFAAPI {
         }
 
         try {
-            switch (cachedConfig.get().getSQLType()) {
-                case MySQL:
-                    return MySQL.getCurrentTime();
-                case SQLite:
-                    return SQLite.getCurrentTime();
-            }
+            cachedConfig.get().getDatabase().getCurrentTime();
         } catch (SQLException ex) {
             throw new APIException(true, ex);
         }

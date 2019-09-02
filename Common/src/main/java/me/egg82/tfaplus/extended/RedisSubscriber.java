@@ -123,7 +123,7 @@ public class RedisSubscriber {
                 }
 
                 try {
-                    InternalAPI.delete(UUID.fromString(message));
+                    InternalAPI.deleteFromMessaging(UUID.fromString(message));
                 } catch (APIException ex) {
                     logger.error(ex.getMessage(), ex);
                 }
