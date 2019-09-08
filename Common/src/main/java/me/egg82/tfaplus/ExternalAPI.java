@@ -45,26 +45,6 @@ public class ExternalAPI {
     }
 
     /**
-     * Returns the current time in millis according to the SQL database server
-     *
-     * @return The current time, in millis, from the database server
-     * @throws APIException if there was an error while attempting to get the time
-     */
-    public long getCurrentSQLTime() throws APIException {
-        try {
-            return (Long) invokeMethod("getCurrentSQLTime");
-        } catch (NoSuchMethodException | IllegalAccessException ex) {
-            throw new APIException(true, "Could not invoke base method.", ex);
-        } catch (InvocationTargetException ex) {
-            Throwable t = ex.getTargetException();
-            if (t.getClass().getName().equals("me.egg82.tfaplus.APIException")) {
-                throw convertToAPIException(t);
-            }
-            throw new APIException(true, "Could not invoke base method.", ex);
-        }
-    }
-
-    /**
      * Register a new Authy user from an existing player
      *
      * @param uuid The player UUID

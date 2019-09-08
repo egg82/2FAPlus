@@ -1,101 +1,78 @@
 package me.egg82.tfaplus;
 
-import java.sql.SQLException;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
-import me.egg82.tfaplus.enums.SQLType;
+import java.util.concurrent.TimeUnit;
+import me.egg82.tfaplus.auth.AuthenticationHandler;
+import me.egg82.tfaplus.auth.data.AuthyData;
+import me.egg82.tfaplus.auth.data.HOTPData;
+import me.egg82.tfaplus.auth.data.TOTPData;
+import me.egg82.tfaplus.enums.AuthenticationType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
-import me.egg82.tfaplus.services.InternalAPI;
-import me.egg82.tfaplus.sql.MySQL;
-import me.egg82.tfaplus.sql.SQLite;
 import me.egg82.tfaplus.utils.ConfigUtil;
+import org.apache.commons.codec.binary.Base32;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TFAAPI {
+    private static final Logger logger = LoggerFactory.getLogger(TFAAPI.class);
+
     private static final TFAAPI api = new TFAAPI();
-    private final InternalAPI internalApi = new InternalAPI();
 
     private TFAAPI() {}
 
     public static TFAAPI getInstance() { return api; }
 
-    public long getCurrentSQLTime() throws APIException {
-        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
-        if (!cachedConfig.isPresent()) {
-            throw new APIException(true, "Could not get cached config.");
-        }
+    private static LoadingCache<UUID, Boolean> verificationCache = Caffeine.newBuilder().expireAfterWrite(3L, TimeUnit.MINUTES).build(k -> Boolean.FALSE);
+    public static void changeVerificationTime(long duration) { verificationCache = Caffeine.newBuilder().expireAfterWrite(duration, TimeUnit.MILLISECONDS).build(k -> Boolean.FALSE); }
 
-        try {
-            cachedConfig.get().getDatabase().getCurrentTime();
-        } catch (SQLException ex) {
-            throw new APIException(true, ex);
-        }
-
-        throw new APIException(true, "Could not get time from database.");
-    }
+    private static final Base32 encoder = new Base32();
 
     public void registerAuthy(UUID uuid, String email, String phone) throws APIException { registerAuthy(uuid, email, phone, "1"); }
 
     public void registerAuthy(UUID uuid, String email, String phone, String countryCode) throws APIException {
-        if (uuid == null) {
-            throw new IllegalArgumentException("uuid cannot be null.");
-        }
-        if (email == null) {
-            throw new IllegalArgumentException("email cannot be null.");
-        }
-        if (email.isEmpty()) {
-            throw new IllegalArgumentException("email cannot be empty.");
-        }
-        if (phone == null) {
-            throw new IllegalArgumentException("phone cannot be null.");
-        }
-        if (phone.isEmpty()) {
-            throw new IllegalArgumentException("phone cannot be empty.");
-        }
-        if (countryCode == null) {
-            throw new IllegalArgumentException("countryCode cannot be null.");
-        }
-        if (countryCode.isEmpty()) {
-            throw new IllegalArgumentException("countryCode cannot be empty.");
-        }
-
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
         }
-
-        if (!cachedConfig.get().getAuthy().isPresent()) {
+        if (!cachedConfig.get().hasAuthenticationHandler(AuthenticationType.AUTHY)) {
             throw new APIException(true, "Authy is not available.");
         }
 
-        internalApi.registerAuthy(uuid, email, phone, countryCode);
+        cachedConfig.get().getAuthenticationHandler(AuthenticationType.AUTHY).register(new AuthyData(uuid, email, phone, countryCode), null, null);
     }
 
     public String registerTOTP(UUID uuid, long codeLength) throws APIException {
-        if (uuid == null) {
-            throw new IllegalArgumentException("uuid cannot be null.");
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
         }
-        if (codeLength <= 0) {
-            throw new IllegalArgumentException("codeLength cannot be <= 0.");
+        if (!cachedConfig.get().hasAuthenticationHandler(AuthenticationType.TOTP)) {
+            throw new APIException(true, "TOTP is not available.");
         }
 
-        return internalApi.registerTOTP(uuid, codeLength);
+        AuthenticationHandler<TOTPData> handler = cachedConfig.get().getAuthenticationHandler(AuthenticationType.TOTP);
+        handler.register(new TOTPData(uuid, codeLength), null, null);
+        return encoder.encodeToString(handler.getData(uuid).getKey().getEncoded());
     }
 
     public String registerHOTP(UUID uuid, long codeLength) throws APIException { return registerHOTP(uuid, codeLength, 0L); }
 
     public String registerHOTP(UUID uuid, long codeLength, long initialCounterValue) throws APIException {
-        if (uuid == null) {
-            throw new IllegalArgumentException("uuid cannot be null.");
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
         }
-        if (codeLength <= 0) {
-            throw new IllegalArgumentException("codeLength cannot be <= 0.");
-        }
-        if (initialCounterValue < 0) {
-            throw new IllegalArgumentException("initialCounterValue cannot be < 0.");
+        if (!cachedConfig.get().hasAuthenticationHandler(AuthenticationType.HOTP)) {
+            throw new APIException(true, "HOTP is not available.");
         }
 
-        return internalApi.registerHOTP(uuid, codeLength, initialCounterValue);
+        AuthenticationHandler<HOTPData> handler = cachedConfig.get().getAuthenticationHandler(AuthenticationType.HOTP);
+        handler.register(new HOTPData(uuid, codeLength, initialCounterValue), null, null);
+        return encoder.encodeToString(handler.getData(uuid).getKey().getEncoded());
     }
 
     public void seekHOTPCounter(UUID uuid, Collection<String> tokens) throws APIException {
@@ -107,38 +84,44 @@ public class TFAAPI {
     }
 
     public void seekHOTPCounter(UUID uuid, String[] tokens) throws APIException {
-        if (uuid == null) {
-            throw new IllegalArgumentException("uuid cannot be null.");
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
         }
-        if (tokens == null) {
-            throw new IllegalArgumentException("tokens cannot be null.");
-        }
-        if (tokens.length <= 1) {
-            throw new IllegalArgumentException("tokens length cannot be <= 1");
+        if (!cachedConfig.get().hasAuthenticationHandler(AuthenticationType.HOTP)) {
+            throw new APIException(true, "HOTP is not available.");
         }
 
-        internalApi.seekHOTPCounter(uuid, tokens);
+        AuthenticationHandler<HOTPData> handler = cachedConfig.get().getAuthenticationHandler(AuthenticationType.HOTP);
+        handler.seek(uuid, tokens);
     }
 
     public boolean isRegistered(UUID uuid) throws APIException {
-        if (uuid == null) {
-            throw new IllegalArgumentException("uuid cannot be null.");
-        }
-
-        return internalApi.isRegistered(uuid);
-    }
-
-    public void delete(UUID uuid) throws APIException {
-        if (uuid == null) {
-            throw new IllegalArgumentException("uuid cannot be null.");
-        }
-
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        InternalAPI.delete(uuid);
+        for (AuthenticationHandler<?> handler : cachedConfig.get().getAuthentication().values()) {
+            if (handler.isRegistered(uuid)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void delete(UUID uuid) throws APIException {
+        Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
+        if (!cachedConfig.isPresent()) {
+            throw new APIException(true, "Could not get cached config.");
+        }
+
+        for (AuthenticationHandler<?> handler : cachedConfig.get().getAuthentication().values()) {
+            if (handler.isRegistered(uuid)) {
+                handler.delete(uuid, true, null, null);
+            }
+        }
     }
 
     public boolean isVerified(UUID uuid, boolean refresh) {
@@ -146,33 +129,36 @@ public class TFAAPI {
             throw new IllegalArgumentException("uuid cannot be null.");
         }
 
-        return internalApi.isVerified(uuid, refresh);
+        boolean retVal = verificationCache.get(uuid);
+        if (refresh) {
+            verificationCache.put(uuid, retVal);
+            if (ConfigUtil.getDebugOrFalse()) {
+                logger.info("Refreshing verification time for " + uuid);
+            }
+        }
+        return retVal;
     }
 
     public boolean verify(UUID uuid, String token) throws APIException {
-        if (uuid == null) {
-            throw new IllegalArgumentException("uuid cannot be null.");
-        }
-        if (token == null) {
-            throw new IllegalArgumentException("token cannot be null.");
-        }
-        if (token.isEmpty()) {
-            throw new IllegalArgumentException("token cannot be empty.");
-        }
-
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             throw new APIException(true, "Could not get cached config.");
         }
 
-        if (cachedConfig.get().getAuthy().isPresent() && internalApi.hasAuthy(uuid)) {
-            return internalApi.verifyAuthy(uuid, token);
-        } else if (internalApi.hasTOTP(uuid)) {
-            return internalApi.verifyTOTP(uuid, token);
-        } else if (internalApi.hasHOTP(uuid)) {
-            return internalApi.verifyHOTP(uuid, token);
+        boolean isRegistered = false;
+        for (AuthenticationHandler<?> handler : cachedConfig.get().getAuthentication().values()) {
+            if (handler.isRegistered(uuid)) {
+                isRegistered = true;
+                if (handler.verify(uuid, token)) {
+                    verificationCache.put(uuid, Boolean.TRUE);
+                    return true;
+                }
+            }
         }
 
-        throw new APIException(false, "User does not have 2FA enabled.");
+        if (!isRegistered) {
+            throw new APIException(false, "User does not have 2FA enabled.");
+        }
+        return false;
     }
 }

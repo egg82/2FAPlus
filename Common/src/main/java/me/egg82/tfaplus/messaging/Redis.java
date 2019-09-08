@@ -1,42 +1,157 @@
-package me.egg82.tfaplus.services;
+package me.egg82.tfaplus.messaging;
 
 import java.util.Base64;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.crypto.spec.SecretKeySpec;
-import me.egg82.tfaplus.core.*;
+import me.egg82.tfaplus.APIException;
+import me.egg82.tfaplus.auth.data.AuthyData;
+import me.egg82.tfaplus.auth.data.HOTPData;
+import me.egg82.tfaplus.auth.data.TOTPData;
+import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.ServiceKeys;
+import me.egg82.tfaplus.services.AbstractRedis;
+import me.egg82.tfaplus.services.InternalAPI;
 import me.egg82.tfaplus.utils.ConfigUtil;
-import me.egg82.tfaplus.utils.RedisUtil;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.analytics.utils.JSONUtil;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.exceptions.JedisException;
 
-public class Redis {
-    private static final Logger logger = LoggerFactory.getLogger(Redis.class);
-
+public class Redis extends AbstractRedis implements MessageHandler {
     private static Base64.Encoder encoder = Base64.getEncoder();
     private static Base64.Decoder decoder = Base64.getDecoder();
 
-    private static final UUID serverId = UUID.randomUUID();
-    public static UUID getServerID() { return serverId; }
+    public Redis(JedisPool pool) { super(pool); }
 
-    private Redis() {}
+    public Redis(JedisPool pool, String password) { super(pool, password); }
 
-    public static void updateFromQueue(SQLFetchResult sqlResult) {
+    public void beginHandling() {
+        try (Jedis redis = getRedis()) {
+            if (redis == null) {
+                return;
+            }
+
+            redis.subscribe(new Subscriber(),
+                    "2faplus-login",
+                    "2faplus-authy",
+                    "2faplus-totp",
+                    "2faplus-hotp",
+                    "2faplus-delete"
+            );
+        } catch (JedisException ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+    }
+
+    private class Subscriber extends JedisPubSub {
+        public void onMessage(String channel, String message) {
+            if (channel.equals("2faplus-login")) {
+                try {
+                    JSONObject obj = JSONUtil.parseObject(message);
+                    UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                    String ip = (String) obj.get("ip");
+                    long created = ((Number) obj.get("created")).longValue();
+                    UUID id = UUID.fromString((String) obj.get("id"));
+
+                    if (!ValidationUtil.isValidIp(ip)) {
+                        logger.warn("non-valid IP sent through Redis pub/sub");
+                        return;
+                    }
+
+                    if (id.equals(handlerID)) {
+                        logger.info("ignoring message sent from this server");
+                        return;
+                    }
+
+                    InternalAPI.add(new LoginData(uuid, ip, created));
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (channel.equals("2faplus-authy")) {
+                try {
+                    JSONObject obj = JSONUtil.parseObject(message);
+                    UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                    long i = ((Number) obj.get("i")).longValue();
+                    UUID id = UUID.fromString((String) obj.get("id"));
+
+                    if (id.equals(handlerID)) {
+                        logger.info("ignoring message sent from this server");
+                        return;
+                    }
+
+                    InternalAPI.add(new AuthyData(uuid, i));
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (channel.equals("2faplus-totp")) {
+                try {
+                    JSONObject obj = JSONUtil.parseObject(message);
+                    UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                    long length = ((Number) obj.get("length")).longValue();
+                    byte[] key = decoder.decode((String) obj.get("key"));
+                    UUID id = UUID.fromString((String) obj.get("id"));
+
+                    if (id.equals(handlerID)) {
+                        logger.info("ignoring message sent from this server");
+                        return;
+                    }
+
+                    InternalAPI.add(new TOTPData(uuid, length, key));
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (channel.equals("2faplus-hotp")) {
+                try {
+                    JSONObject obj = JSONUtil.parseObject(message);
+                    UUID uuid = UUID.fromString((String) obj.get("uuid"));
+                    long length = ((Number) obj.get("length")).longValue();
+                    long counter = ((Number) obj.get("counter")).longValue();
+                    byte[] key = decoder.decode((String) obj.get("key"));
+                    UUID id = UUID.fromString((String) obj.get("id"));
+
+                    if (id.equals(handlerID)) {
+                        logger.info("ignoring message sent from this server");
+                        return;
+                    }
+
+                    InternalAPI.add(new HOTPData(uuid, length, counter, key));
+                } catch (APIException | ParseException | ClassCastException | NullPointerException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (channel.equals("2faplus-delete")) {
+                // In this case, the message is the "UUID"
+
+                if (!ValidationUtil.isValidUuid(message)) {
+                    logger.warn("non-valid UUID sent through Redis pub/sub");
+                    return;
+                }
+
+                try {
+                    InternalAPI.deleteFromMessaging(UUID.fromString(message));
+                } catch (APIException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            }
+        }
+    }
+
+    private final UUID handlerID = UUID.randomUUID();
+    public UUID getHandlerID() { return handlerID; }
+
+    public void updateFromQueue(SQLFetchResult sqlResult) {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             return;
         }
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis == null) {
                 return;
             }
@@ -126,13 +241,13 @@ public class Redis {
         }
     }
 
-    public static void update(LoginData sqlResult) {
+    public void broadcast(LoginData sqlResult) {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             return;
         }
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis == null) {
                 return;
             }
@@ -175,13 +290,13 @@ public class Redis {
         }
     }
 
-    public static void update(AuthyData sqlResult) {
+    public void broadcast(AuthyData sqlResult) {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             return;
         }
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis == null) {
                 return;
             }
@@ -199,13 +314,13 @@ public class Redis {
         }
     }
 
-    public static void update(TOTPData sqlResult) {
+    public void broadcast(TOTPData sqlResult) {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             return;
         }
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis == null) {
                 return;
             }
@@ -225,13 +340,13 @@ public class Redis {
         }
     }
 
-    public static void update(HOTPData sqlResult) {
+    public void broadcast(HOTPData sqlResult) {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             return;
         }
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis == null) {
                 return;
             }
@@ -252,13 +367,13 @@ public class Redis {
         }
     }
 
-    public static void delete(String ip) {
+    public void delete(String ip) {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             return;
         }
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis == null) {
                 return;
             }
@@ -288,13 +403,13 @@ public class Redis {
         }
     }
 
-    public static void delete(UUID uuid) {
+    public void delete(UUID uuid) {
         Optional<CachedConfigValues> cachedConfig = ConfigUtil.getCachedConfig();
         if (!cachedConfig.isPresent()) {
             return;
         }
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis == null) {
                 return;
             }
@@ -325,10 +440,10 @@ public class Redis {
         }
     }
 
-    public static Optional<Boolean> getLogin(UUID uuid, String ip) {
+    public Optional<Boolean> getLogin(UUID uuid, String ip) {
         Boolean result = null;
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis != null) {
                 String key = "2faplus:login:" + uuid + "|" + ip;
 
@@ -345,10 +460,10 @@ public class Redis {
         return Optional.ofNullable(result);
     }
 
-    public static Optional<Long> getAuthy(UUID uuid) {
+    public Optional<Long> getAuthy(UUID uuid) {
         Long result = null;
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis != null) {
                 String key = "2faplus:authy:" + uuid;
 
@@ -365,10 +480,10 @@ public class Redis {
         return Optional.ofNullable(result);
     }
 
-    public static Optional<TOTPData> getTOTP(UUID uuid) {
+    public Optional<TOTPData> getTOTP(UUID uuid) {
         TOTPData result = null;
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis != null) {
                 String key = "2faplus:totp:" + uuid;
 
@@ -386,10 +501,10 @@ public class Redis {
         return Optional.ofNullable(result);
     }
 
-    public static Optional<HOTPData> getHOTP(UUID uuid) {
+    public Optional<HOTPData> getHOTP(UUID uuid) {
         HOTPData result = null;
 
-        try (Jedis redis = RedisUtil.getRedis()) {
+        try (Jedis redis = getRedis()) {
             if (redis != null) {
                 String key = "2faplus:hotp:" + uuid;
 

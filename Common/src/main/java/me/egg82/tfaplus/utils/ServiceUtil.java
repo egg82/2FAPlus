@@ -12,7 +12,7 @@ import me.egg82.tfaplus.APIException;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.RabbitMQReceiver;
 import me.egg82.tfaplus.extended.RedisSubscriber;
-import me.egg82.tfaplus.services.Redis;
+import me.egg82.tfaplus.messaging.Redis;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.service.ServiceNotFoundException;
 import org.slf4j.Logger;

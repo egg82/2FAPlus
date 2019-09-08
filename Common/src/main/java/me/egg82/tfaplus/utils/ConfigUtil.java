@@ -3,14 +3,9 @@ package me.egg82.tfaplus.utils;
 import java.util.Optional;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
-import ninja.egg82.service.ServiceLocator;
 import ninja.leaping.configurate.ConfigurationNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ConfigUtil {
-    private static final Logger logger = LoggerFactory.getLogger(ConfigUtil.class);
-
     private static Configuration config = null;
     private static CachedConfigValues cachedConfig = null;
 

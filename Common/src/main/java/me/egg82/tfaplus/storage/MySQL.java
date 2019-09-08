@@ -1,4 +1,4 @@
-package me.egg82.tfaplus.sql;
+package me.egg82.tfaplus.storage;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -8,18 +8,31 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import me.egg82.tfaplus.APIException;
-import me.egg82.tfaplus.core.*;
+import me.egg82.tfaplus.auth.data.AuthyData;
+import me.egg82.tfaplus.auth.data.HOTPData;
+import me.egg82.tfaplus.auth.data.TOTPData;
+import me.egg82.tfaplus.core.LoginData;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.utils.ValidationUtil;
 import ninja.egg82.core.SQLQueryResult;
 import ninja.egg82.sql.SQL;
 
-public class MySQL implements DatabaseHandler {
+public class MySQL implements StorageHandler {
     private final SQL sql;
     private final SQLType type;
     private final String tablePrefix;
 
     public MySQL(SQL sql, SQLType type, String tablePrefix) {
+        if (sql == null) {
+            throw new IllegalArgumentException("sql cannot be null.");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("type cannot be null.");
+        }
+        if (tablePrefix == null) {
+            tablePrefix = "";
+        }
+
         this.sql = sql;
         this.type = type;
         this.tablePrefix = tablePrefix;

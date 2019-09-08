@@ -1,18 +1,14 @@
 package me.egg82.tfaplus.extended;
 
-import com.authy.AuthyApiClient;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.rabbitmq.client.ConnectionFactory;
 import java.util.Collection;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import me.egg82.tfaplus.auth.AuthenticationHandler;
+import me.egg82.tfaplus.auth.data.AuthenticationData;
 import me.egg82.tfaplus.core.FreezeConfigContainer;
-import me.egg82.tfaplus.enums.SQLType;
+import me.egg82.tfaplus.enums.AuthenticationType;
 import me.egg82.tfaplus.services.InternalAPI;
-import me.egg82.tfaplus.sql.DatabaseHandler;
-import ninja.egg82.sql.SQL;
-import ninja.egg82.tuples.longs.LongObjectPair;
-import redis.clients.jedis.JedisPool;
 
 public class CachedConfigValues {
     private CachedConfigValues() {}
@@ -20,11 +16,11 @@ public class CachedConfigValues {
     private boolean debug = false;
     public boolean getDebug() { return debug; }
 
-    private LongObjectPair<TimeUnit> ipCacheTime = new LongObjectPair<>(30L, TimeUnit.DAYS);
-    public long getIPCacheTime() { return ipCacheTime.getSecond().toMillis(ipCacheTime.getFirst()); }
+    private long ipCacheTime = TimeUnit.DAYS.toMillis(30L);
+    public long getIPCacheTime() { return ipCacheTime; }
 
-    private LongObjectPair<TimeUnit> verificationCacheTime = new LongObjectPair<>(3L, TimeUnit.MINUTES);
-    public long getVerificationCacheTime() { return verificationCacheTime.getSecond().toMillis(verificationCacheTime.getFirst()); }
+    private long verificationCacheTime = TimeUnit.MINUTES.toMillis(3L);
+    public long getVerificationCacheTime() { return verificationCacheTime; }
 
     private ImmutableSet<String> commands = ImmutableSet.of();
     public ImmutableSet<String> getCommands() { return commands; }
@@ -41,20 +37,13 @@ public class CachedConfigValues {
     private ImmutableSet<String> ignored = ImmutableSet.of();
     public ImmutableSet<String> getIgnored() { return ignored; }
 
-    private JedisPool redisPool = null;
-    public JedisPool getRedisPool() { return redisPool; }
-
-    private ConnectionFactory rabbitConnectionFactory = null;
-    public ConnectionFactory getRabbitConnectionFactory() { return rabbitConnectionFactory; }
-
-    private DatabaseHandler database = null;
-    public DatabaseHandler getDatabase() { return database; }
+    private ImmutableMap<AuthenticationType, AuthenticationHandler<?>> authentication = ImmutableMap.of();
+    public boolean hasAuthenticationHandler(AuthenticationType type) { return authentication.containsKey(type); }
+    public <T extends AuthenticationData> AuthenticationHandler<T> getAuthenticationHandler(AuthenticationType type) { return (AuthenticationHandler<T>) authentication.get(type); }
+    public ImmutableMap<AuthenticationType, AuthenticationHandler<?>> getAuthentication() { return authentication; }
 
     private String serverName = null;
     public String getServerName() { return serverName; }
-
-    private AuthyApiClient authy = null;
-    public Optional<AuthyApiClient> getAuthy() { return Optional.ofNullable(authy); }
 
     public static CachedConfigValues.Builder builder() { return new CachedConfigValues.Builder(); }
 
@@ -72,8 +61,11 @@ public class CachedConfigValues {
             if (value <= 0L) {
                 throw new IllegalArgumentException("value cannot be <= 0.");
             }
+            if (unit == null) {
+                throw new IllegalArgumentException("unit cannot be null.");
+            }
 
-            values.ipCacheTime = new LongObjectPair<>(value, unit);
+            values.ipCacheTime = unit.toMillis(value);
             return this;
         }
 
@@ -81,8 +73,11 @@ public class CachedConfigValues {
             if (value <= 0L) {
                 throw new IllegalArgumentException("value cannot be <= 0.");
             }
+            if (unit == null) {
+                throw new IllegalArgumentException("unit cannot be null.");
+            }
 
-            values.verificationCacheTime = new LongObjectPair<>(value, unit);
+            values.verificationCacheTime = unit.toMillis(value);
             return this;
         }
 
@@ -90,6 +85,7 @@ public class CachedConfigValues {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
+
             values.commands = ImmutableSet.copyOf(value);
             return this;
         }
@@ -108,6 +104,7 @@ public class CachedConfigValues {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
+
             values.freeze = value;
             return this;
         }
@@ -116,25 +113,17 @@ public class CachedConfigValues {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
+
             values.ignored = ImmutableSet.copyOf(value);
             return this;
         }
 
-        public CachedConfigValues.Builder redisPool(JedisPool value) {
-            values.redisPool = value;
-            return this;
-        }
-
-        public CachedConfigValues.Builder rabbitConnectionFactory(ConnectionFactory value) {
-            values.rabbitConnectionFactory = value;
-            return this;
-        }
-
-        public CachedConfigValues.Builder database(DatabaseHandler value) {
+        public CachedConfigValues.Builder authentication(ImmutableMap<AuthenticationType, AuthenticationHandler<?>> value) {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
-            values.database = value;
+
+            values.authentication = value;
             return this;
         }
 
@@ -142,24 +131,13 @@ public class CachedConfigValues {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
+
             values.serverName = value;
             return this;
         }
 
-        public CachedConfigValues.Builder authy(Optional<AuthyApiClient> value) {
-            if (value == null) {
-                throw new IllegalArgumentException("value cannot be null.");
-            }
-            if (!value.isPresent()) {
-                return this;
-            }
-
-            values.authy = value.get();
-            return this;
-        }
-
         public CachedConfigValues build() {
-            InternalAPI.changeVerificationTime(values.verificationCacheTime.getFirst(), values.verificationCacheTime.getSecond());
+            InternalAPI.changeVerificationTime(values.verificationCacheTime);
             return values;
         }
     }

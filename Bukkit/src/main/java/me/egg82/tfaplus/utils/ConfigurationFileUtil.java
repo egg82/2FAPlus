@@ -16,10 +16,9 @@ import me.egg82.tfaplus.core.FreezeConfigContainer;
 import me.egg82.tfaplus.enums.SQLType;
 import me.egg82.tfaplus.extended.CachedConfigValues;
 import me.egg82.tfaplus.extended.Configuration;
-import me.egg82.tfaplus.extended.RabbitMQReceiver;
-import me.egg82.tfaplus.sql.DatabaseHandler;
-import me.egg82.tfaplus.sql.MySQL;
-import me.egg82.tfaplus.sql.SQLite;
+import me.egg82.tfaplus.storage.StorageHandler;
+import me.egg82.tfaplus.storage.MySQL;
+import me.egg82.tfaplus.storage.SQLite;
 import ninja.egg82.service.ServiceLocator;
 import ninja.egg82.sql.SQL;
 import ninja.leaping.configurate.ConfigurationNode;
@@ -262,7 +261,7 @@ public class ConfigurationFileUtil {
         return Optional.of(new AuthyApiClient(key, "https://api.authy.com/", debug));
     }
 
-    private static DatabaseHandler getDatabase(Plugin plugin, ConfigurationNode storageConfigNode, String tablePrefix) {
+    private static StorageHandler getDatabase(Plugin plugin, ConfigurationNode storageConfigNode, String tablePrefix) {
         SQLType type = SQLType.getByName(storageConfigNode.getNode("method").getString("sqlite"));
         if (type == null) {
             logger.warn("storage.method is an unknown value. Using default value.");
