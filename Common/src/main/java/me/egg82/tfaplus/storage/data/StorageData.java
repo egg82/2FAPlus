@@ -1,7 +1,11 @@
-package me.egg82.tfaplus.core;
+package me.egg82.tfaplus.storage.data;
 
 import java.util.Collection;
 import java.util.Objects;
+import me.egg82.tfaplus.auth.data.AuthyData;
+import me.egg82.tfaplus.auth.data.HOTPData;
+import me.egg82.tfaplus.auth.data.TOTPData;
+import me.egg82.tfaplus.core.LoginData;
 
 public class StorageData {
     private final Collection<LoginData> loginData;

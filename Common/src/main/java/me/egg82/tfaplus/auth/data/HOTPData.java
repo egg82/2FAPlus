@@ -1,4 +1,4 @@
-package me.egg82.tfaplus.core;
+package me.egg82.tfaplus.auth.data;
 
 import java.util.UUID;
 import javax.crypto.SecretKey;
@@ -10,9 +10,30 @@ public class HOTPData extends AuthenticationData {
     private final long counter;
     private final SecretKey key;
 
+    public HOTPData(UUID uuid, long length, long counter) {
+        super(uuid);
+
+        if (length <= 0) {
+            throw new IllegalArgumentException("length cannot be <= 0.");
+        }
+        if (counter < 0) {
+            throw new IllegalArgumentException("counter cannot be < 0");
+        }
+
+        this.length = length;
+        this.counter = counter;
+        this.key = null;
+    }
+
     public HOTPData(UUID uuid, long length, long counter, byte[] key) {
         super(uuid);
 
+        if (length <= 0) {
+            throw new IllegalArgumentException("length cannot be <= 0.");
+        }
+        if (counter < 0) {
+            throw new IllegalArgumentException("counter cannot be < 0");
+        }
         if (key == null) {
             throw new IllegalArgumentException("key cannot be null.");
         }
@@ -25,6 +46,12 @@ public class HOTPData extends AuthenticationData {
     public HOTPData(UUID uuid, long length, long counter, SecretKey key) {
         super(uuid);
 
+        if (length <= 0) {
+            throw new IllegalArgumentException("length cannot be <= 0.");
+        }
+        if (counter < 0) {
+            throw new IllegalArgumentException("counter cannot be < 0");
+        }
         if (key == null) {
             throw new IllegalArgumentException("key cannot be null.");
         }

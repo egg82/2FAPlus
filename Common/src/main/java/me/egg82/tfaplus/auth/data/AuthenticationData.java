@@ -1,4 +1,4 @@
-package me.egg82.tfaplus.core;
+package me.egg82.tfaplus.auth.data;
 
 import java.util.Objects;
 import java.util.UUID;
