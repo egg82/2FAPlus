@@ -64,6 +64,13 @@
         </plugins>
     </build>
 
+    <distributionManagement>
+        <repository>
+            <id>nexus</id>
+            <url>https://nexus.egg82.me/repository/maven-releases/</url>
+        </repository>
+    </distributionManagement>
+
     <modules>
         <module>Common</module>
         <module>Bukkit</module>
